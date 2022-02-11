@@ -1,5 +1,5 @@
 
-#define FCY 4000000UL
+#define FCY 40000000UL
 /**
   Section: Included Files
 */
@@ -23,6 +23,7 @@
  */
 
 unsigned int recv_position = 0;  //stores what SPI reads NOW
+unsigned int ADCvalue = 0;
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     
     _LATE15 = ~_LATE15;
@@ -72,6 +73,9 @@ void Delay_us(unsigned int delay){
         __asm__ volatile ("nop");
     }
 }
+
+//value of 476 at __delay_us with LAT = ~LAT produces 9.998 kHz
+//that is at 4000000UL fcy, but at 40,000,000 UL, 1.008 kHz
 int main(void)
 {
     __C30_UART = 2;
@@ -84,16 +88,30 @@ int main(void)
     
     timer1setup();
     
+    _TRISE14 = 0;   //output for C lower switch
     _TRISE15 = 0;   //output for C upper switch
     _TRISG6 = 1;    //input for ADC
-    _LATE15 = 0;    //off initially
+    _TRISG8 = 0;    //output for devboard pot source
     
-    printf("Hello world!\n");
+    _LATE14 = 1;    //on initially
+    _LATE15 = 0;    //off initially
+    _LATG8 = 1;     //power supply for pot
+    
+    printf("ABCDEDF!\n");
     while (1)
     {
-        AD1CON1bits.SAMP = 1;
-        __delay_us(1);
-        AD1CON1bits.SAMP
+        _LATE14 = ~_LATE14;
+        __delay_us(476);
+        //_LATE14 = 0;
+        //__delay_us(473);
+       /* AD1CON1bits.SAMP = 1;
+        __delay_us(100);
+        AD1CON1bits.SAMP = 0;
+        while (AD1CON1bits.DONE == 0){};
+        ADCvalue = ADC1BUF0;
+        Delay_us(1000);
+        printf("ADC:%u \n", ADCvalue);
+        */
     }
     return 1; 
 }

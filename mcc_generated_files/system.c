@@ -63,7 +63,7 @@
 
 // FOSC
 #pragma config POSCMD = HS    //Primary Oscillator Mode Select Bits->HS Crystal Oscillator mode
-#pragma config OSCIOFNC = OFF    //OSC2 Pin I/O Function Enable Bit->OSC2 is clock output
+#pragma config OSCIOFNC = ON    //OSC2 Pin I/O Function Enable Bit->OSC2 is clock output origianlly OFF
 #pragma config IOL1WAY = ON    //Peripheral Pin Select Configuration Bit->Allow Only One reconfiguration
 #pragma config FCKSM = CSECMD    //Clock Switching Mode Bits->Clock Switching is enabled,Fail-safe Clock Monitor is disabled
 #pragma config PLLKEN = ON    //PLL Lock Enable Bit->Clock switch to PLL source will wait until the PLL lock signal is valid
