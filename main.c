@@ -83,7 +83,7 @@ int main(void)
     SYSTEM_Initialize();
     UART_initing();
     UART2_start();
-    initadc1();
+   
    // SPI_init();
     
     timer1setup();
@@ -95,23 +95,24 @@ int main(void)
     
     _LATE14 = 1;    //on initially
     _LATE15 = 0;    //off initially
+    _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
-    
+     initadc1();
+     
     printf("ABCDEDF!\n");
     while (1)
     {
-        _LATE14 = ~_LATE14;
-        __delay_us(476);
-        //_LATE14 = 0;
-        //__delay_us(473);
-       /* AD1CON1bits.SAMP = 1;
-        __delay_us(100);
+      //  _LATE14 = ~_LATE14;
+      //  __delay_us(476);
+       
+        AD1CON1bits.SAMP = 1;
+        __delay_us(50);
         AD1CON1bits.SAMP = 0;
         while (AD1CON1bits.DONE == 0){};
         ADCvalue = ADC1BUF0;
-        Delay_us(1000);
+        //Delay_us(1000);
         printf("ADC:%u \n", ADCvalue);
-        */
+        
     }
     return 1; 
 }
