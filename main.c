@@ -96,11 +96,13 @@ int main(void)
     
     timer1setup();
     
+    _TRISC13 = 0;   //output for Csn for position sensor
     _TRISE14 = 0;   //output for C lower switch
     _TRISE15 = 0;   //output for C upper switch
     _TRISG6 = 1;    //input for ADC
     _TRISG8 = 0;    //output for devboard pot source
     
+    _LATC13 = 1;    //initially on
     _LATE14 = 1;    //on initially
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
