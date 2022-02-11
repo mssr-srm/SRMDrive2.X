@@ -76,6 +76,14 @@ void Delay_us(unsigned int delay){
 
 //value of 476 at __delay_us with LAT = ~LAT produces 9.998 kHz
 //that is at 4000000UL fcy, but at 40,000,000 UL, 1.008 kHz
+
+unsigned int sampling1(void){
+    AD1CON1bits.SAMP = 1;
+    __delay_us(50);
+    AD1CON1bits.SAMP = 0;
+    while (AD1CON1bits.DONE == 0){};
+    return ADC1BUF0;
+}
 int main(void)
 {
     __C30_UART = 2;
@@ -105,11 +113,11 @@ int main(void)
       //  _LATE14 = ~_LATE14;
       //  __delay_us(476);
        
-        AD1CON1bits.SAMP = 1;
-        __delay_us(50);
-        AD1CON1bits.SAMP = 0;
-        while (AD1CON1bits.DONE == 0){};
-        ADCvalue = ADC1BUF0;
+       // AD1CON1bits.SAMP = 1;
+      //  __delay_us(50);
+      //  AD1CON1bits.SAMP = 0;
+     //   while (AD1CON1bits.DONE == 0){};
+        ADCvalue = sampling1();
         //Delay_us(1000);
         printf("ADC:%u \n", ADCvalue);
         
