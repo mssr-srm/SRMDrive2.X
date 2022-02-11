@@ -108,7 +108,7 @@ int main(void)
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
      initadc1();
-     
+     SPI_init();
     printf("ABCDEDF!\n");
     while (1)
     {
@@ -134,7 +134,7 @@ unsigned int readSPI(){
     
    //Csn pin for encoder has to be active for at least 500ns
     _LATC13 = 1;
-
+    //_delay_us(1); //greater than 500 ns?
     _LATC13 = 0;
      __delay_us(1);       
     //then activate clock signal after the CSnpulse but there must be some delay of 500ns
