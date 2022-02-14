@@ -95,6 +95,7 @@ int main(void)
     UART2_start();
    
    // SPI_init();
+    unsigned int rotorpos = 0;
     
     timer1setup();
     
@@ -124,8 +125,10 @@ int main(void)
         //ADCvalue = sampling1();
         //Delay_us(1000);
        // printf("ADC:%u \n", ADCvalue);
-        readSPI();  //just testing
-        
+        rotorpos = readSPI();  //just testing
+        printf("%u\n", rotorpos);
+        __delay_us(5000);
+      __delay_us(5000);
     }
     return 1; 
 }
@@ -137,7 +140,7 @@ unsigned int readSPI(){
     
    //Csn pin for encoder has to be active for at least 500ns
     _LATC13 = 1;
-    //_delay_us(1); //greater than 500 ns?
+    __delay_us(1); //greater than 500 ns?
     _LATC13 = 0;
      __delay_us(1);       
     //then activate clock signal after the CSnpulse but there must be some delay of 500ns
