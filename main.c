@@ -84,6 +84,8 @@ unsigned int sampling1(void){
     while (AD1CON1bits.DONE == 0){};
     return ADC1BUF0;
 }
+
+unsigned int readSPI(void);
 int main(void)
 {
     __C30_UART = 2;
@@ -119,9 +121,10 @@ int main(void)
       //  __delay_us(50);
       //  AD1CON1bits.SAMP = 0;
      //   while (AD1CON1bits.DONE == 0){};
-        ADCvalue = sampling1();
+        //ADCvalue = sampling1();
         //Delay_us(1000);
-        printf("ADC:%u \n", ADCvalue);
+       // printf("ADC:%u \n", ADCvalue);
+        readSPI();  //just testing
         
     }
     return 1; 

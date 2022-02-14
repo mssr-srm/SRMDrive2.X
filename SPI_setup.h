@@ -13,17 +13,17 @@ void SPI_init(){
     SPI1CON1bits.CKP = 1; // Idle state for clock is a high level; see encoder datasheet
 // active state is a high level
     /*
-     * 000 8:1
-     * 001  7
-     * 010  6
-     * 011  5
+     * 000 8:1  00 64:1
+     * 001  7   01 16:1
+     * 010  6   10 4:1
+     * 011  5   11 1:1
      * 100  4
      * 101  3
      * 110  2
      * 111  1
      */
-    
-    SPI1CON1bits.SPRE = 0b110;
+    //ff results into 80:1, so SPIclk is 500kHz (0.5 MHz) which confirms clock is 40 MHz
+    SPI1CON1bits.SPRE = 0b011;
     SPI1CON1bits.PPRE = 0b01;
     SPI1BUF = 0x0000;
     SPI1STATbits.SPIEN = 1; // Enable SPI module
