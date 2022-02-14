@@ -30,6 +30,27 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     IFS0bits.T1IF = 0;
 }
 
+void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
+    
+    
+    IFS0bits.T2IF = 0;
+}
+
+void __attribute__ ((interrupt,no_auto_psv)) _T3Interrupt(void){
+    
+    IFS0bits.T3IF = 0;
+}
+
+void __attribute__ ((interrupt,no_auto_psv)) _T4Interrupt(void){
+  
+    IFS1bits.T4IF = 0;
+}
+
+void __attribute__ ((interrupt,no_auto_psv)) _T5Interrupt(void){
+    
+   
+    IFS1bits.T5IF = 0;
+}
 
 void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 
@@ -39,7 +60,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
-    PR1 = 1000;
+    PR1 = 2000;
     T1CONbits.TCKPS = 0x0000;
     
     //interrupt
@@ -65,6 +86,52 @@ void timer2setup(){
     //turn on
     T2CONbits.TON;
 }
+
+void timer3setup(){
+    T3CON = 0x0000;
+    TMR3 = 0x0000;
+    PR3 = 15625;
+    T3CONbits.TCKPS = 0b0011;
+    
+    //interrupts
+    IPC2bits.T3IP = 7;
+    IFS0bits.T3IF = 0;
+    IEC0bits.T2IE = 1;
+    
+    //turn on
+    T3CONbits.TON;
+}
+
+void timer4setup(){
+    T4CON = 0x0000;
+    TMR4 = 0x0000;
+    PR4 = 15625;
+    T4CONbits.TCKPS = 0b0011;
+    
+    //interrupts
+    IPC6bits.T4IP = 7;
+    IFS1bits.T4IF = 0;
+    IEC1bits.T4IE = 1;
+    
+    //turn on
+    T4CONbits.TON;
+}
+
+void timer5setup(){
+    T5CON = 0x0000;
+    TMR5 = 0x0000;
+    PR5 = 15625;
+    T5CONbits.TCKPS = 0b0011;
+    
+    //interrupts
+    IPC7bits.T5IP = 7;
+    IFS1bits.T5IF = 0;
+    IEC1bits.T5IE = 1;
+    
+    //turn on
+    T5CONbits.TON;
+}
+
 
 void Delay_us(unsigned int delay){
     int i =0;
