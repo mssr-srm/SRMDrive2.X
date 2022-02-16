@@ -186,7 +186,7 @@ unsigned int readSPI(void);
  *  else if AB..
  * ...
  * else if BC{
- *  turn of A no matter current (inactive phase)
+ *  turn off A no matter current (inactive phase)
  *  if currB < lowerlimitB
  *      turn on B
  *  else if currB > upperlimitB
