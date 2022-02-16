@@ -22,8 +22,8 @@ void SPI_init(){
      * 110  2
      * 111  1
      */
-    //ff results into 80:1, so SPIclk is 500kHz (0.5 MHz) which confirms clock is 40 MHz
-    SPI1CON1bits.SPRE = 0b011;
+    //ff results into 32:1, so SPIclk is 125 0kHz (1.25 MHz) which confirms clock is 40 MHz
+    SPI1CON1bits.SPRE = 0b110;
     SPI1CON1bits.PPRE = 0b01;
     SPI1BUF = 0x0000;
     SPI1STATbits.SPIEN = 1; // Enable SPI module
