@@ -153,6 +153,67 @@ unsigned int sampling1(void){
 }
 
 unsigned int readSPI(void);
+
+/*
+ The entire thing that commutates the motor *should be in a single* ISR
+ * if possible, as it possibly simplifies coding and has economic use of dspic 
+ * resources. However this means that the ISR time should be budgeted i.e.
+ * SPI and ADC readings should fit inside the chosen frequency.
+ * The logic should be: 
+ * First, setup a timer and its interrupt that is twice as fast as the desired
+ * switching rate of the coils. 
+ * Second, determine position with that timer
+ * Then, in this same interrupt routine, with that position data we can 
+ * determine which phase should be active in the first place. 
+ * FOr now I believe there are 6 possible choices:
+ * A, AB, B, BC, C, CA and cycle repeats. Those with two letters are considers
+ * the overlap given rotor position and the so-called Advance angle of switching
+ * which considers the finite inductor rise time.
+ * 
+ * Once we know the position, we know the active phase combos, then with a
+ * basic If else we can now measure the currents in those phases with the ADC.
+ * Note that the ADC reading can be a bit slow, and this is not even considering
+ * the timing requirements accdg to dsPIC datasheets
+ * after we know where in the hysteresis band we are, we can send the swtiching 
+ * info to the three active transistors (assume soft switching)
+ * 
+ * pseudo code
+ * Timer 2 ISR {
+ *  determine position
+ *  ah okay phases B and C should be active given rotorpos
+ * 
+ *  if A...
+ *  else if AB..
+ * ...
+ * else if BC{
+ *  turn of A no matter current (inactive phase)
+ *  if currB < lowerlimitB
+ *      turn on B
+ *  else if currB > upperlimitB
+ *      turn off B
+ *  else B
+ *      ignore (keep status quo)
+ *  [then same checks for C]
+ *  
+ * }
+ *
+ * }
+ * 
+ * ^all that should fit within timer set. FOr now, we choose 20 kHz timing so that
+ * the frequency of coils are 10 kHz. Which means entire code should be executed
+ * within 50,000 ns. SPI needs 16 clock cycles to send full data, and its clock
+ * speed is 1.25 MHz. Therefor rotorpos readout with SPI takes 800 ns x 16 bits =
+ * 12,800 ns. Lets say 14,000 ns with allowance.
+ * 
+ * So there remains 36,000 ns to determine with if-else which are the active phases
+ * and to read at most 2 ADC modules (AB, BC, CA). So ideally, IF ONLY 1 of the 
+ * above possible cases are chosen (no reason for otherwise, since this is only
+ * a very basic control method), we have 36,000 ns to determine which, then use
+ * ADC at most twice. THe "problem" here is that ADC can be a slow process. It
+ * has two parts: sampling and conversion. Right now (16-02-22) conversion is about
+ * 16 * Tcy = 16 * 25 = 400 ns. But currently sampling is set with DELAY of 50 us
+ * waaay longer than 36000 ns budget. Need to reconsider.
+ */
 int main(void)
 {
     __C30_UART = 2;
