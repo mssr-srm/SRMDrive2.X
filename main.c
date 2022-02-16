@@ -24,8 +24,13 @@
 
 unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
+unsigned int rotorpos = 0;
+
+unsigned int readSPI(void);
+
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
-    
+    //rotorpos = readSPI();  //just testing
+       // printf("%u\n", rotorpos);
     _LATE15 = ~_LATE15;
     IFS0bits.T1IF = 0;
 }
@@ -60,7 +65,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
-    PR1 = 2000;
+    PR1 = 1000;
     T1CONbits.TCKPS = 0x0000;
     
     //interrupt
@@ -152,7 +157,7 @@ unsigned int sampling1(void){
     return ADC1BUF0;
 }
 
-unsigned int readSPI(void);
+
 
 /*
  The entire thing that commutates the motor *should be in a single* ISR
@@ -223,7 +228,7 @@ int main(void)
     UART2_start();
    
    // SPI_init();
-    unsigned int rotorpos = 0;
+    
     
     timer1setup();
     
@@ -254,9 +259,8 @@ int main(void)
         //Delay_us(1000);
        // printf("ADC:%u \n", ADCvalue);
         rotorpos = readSPI();  //just testing
-        printf("%u\n", rotorpos);
-        __delay_us(5000);
-      __delay_us(5000);
+        //printf("%u\n", rotorpos); //apparently this line takes 5ms to send, interesting
+        //__delay_us(20);
     }
     return 1; 
 }
@@ -276,7 +280,7 @@ unsigned int readSPI(){
     SPI1BUF = 0x0000;   //starts the clock signal
     //wait while the receive buffer is filled
     while(SPI1STATbits.SPIRBF == 0b0){}
-    __delay_us(1);  
+    //__delay_us(1);  
    // _LATC13 = 1;
     recv_position =  SPI1BUF;    //copy only the lower twelve bits
     recv_position =  0x0FFF & recv_position;
