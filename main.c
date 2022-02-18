@@ -165,7 +165,7 @@ void Delay_us(unsigned int delay){
 //value of 173 at __delay32 with LAT_~LAT (and nothing else) produces 100.0 kHz
 unsigned int sampling1(void){
     AD1CON1bits.SAMP = 1;
-    __delay_us(50);
+    __delay_us(2);
     AD1CON1bits.SAMP = 0;
     while (AD1CON1bits.DONE == 0){};
     return ADC1BUF0;
@@ -282,15 +282,15 @@ int main(void)
          * DS0032 to DS0034
          */
         if(start_read_pos == 1){
-            _LATE14 = 1;
-            rotorpos = readSPI();  //just testing
             
-            //ADCvalue = sampling1();
+            rotorpos = readSPI();  //just testing
+            _LATE14 = 1;
+            ADCvalue = sampling1();
             start_read_pos = 0;
             //__delay_us(100);
             _LATE14 = 0;
         }
-      // printf("ADC:%u \n", ADCvalue);
+       printf("ADC:%u \n", ADCvalue);
        //printf("%u\n", rotorpos); //apparently this line takes 5ms to send, interesting
         //__delay_us(20);
     }
@@ -311,15 +311,17 @@ unsigned int readSPI(){
     
     _LATC13 = 0;
     __delay32(1);
-    
     //then activate clock signal after the CSnpulse but there must be some delay of 500ns
     //i dont think the delay is needed because writing to the SPI1BUF register may take at least 1 cycle...
     SPI1BUF = 0x0000;   //starts the clock signal
     //wait while the receive buffer is filled
+    
     while(SPI1STATbits.SPIRBF == 0b0){}
+    
     //__delay_us(1);  
    // _LATC13 = 1;
     recv_position =  SPI1BUF;    //copy only the lower twelve bits
+ 
     recv_position =  0x0FFF & recv_position;
    // SPI1STATbits.SPIRBF = 0b0;
     return  recv_position;
