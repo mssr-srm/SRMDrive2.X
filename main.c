@@ -26,11 +26,24 @@ unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
 unsigned int rotorpos = 0;
 
+int start_read_pos = 0;
+
 unsigned int readSPI(void);
 
+void read_rotorpos(void);
+
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
-    //rotorpos = readSPI();  //just testing
-       // printf("%u\n", rotorpos);
+    //Csn pin for encoder has to be active for at least 500ns
+    //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
+    //so 173 equals 5000 ns (5us). According to datasheet, Tclkfe (time after Csn before clock starts)
+    //is 500ns, so to be safe, __delay(32) 18? But experiments say it works even without!
+    //_LATC13 = 1;
+    //__delay32(1);
+    
+    //_LATC13 = 0;
+    //__delay32(1);
+    //SPI1BUF = 0x0000;   //starts the clock signal
+    start_read_pos =1;
     _LATE15 = ~_LATE15;
     IFS0bits.T1IF = 0;
 }
@@ -149,15 +162,19 @@ void Delay_us(unsigned int delay){
 //value of 476 at __delay_us with LAT = ~LAT produces 9.998 kHz
 //that is at 4000000UL fcy, but at 40,000,000 UL, 1.008 kHz
 
+//value of 173 at __delay32 with LAT_~LAT (and nothing else) produces 100.0 kHz
 unsigned int sampling1(void){
     AD1CON1bits.SAMP = 1;
     __delay_us(50);
     AD1CON1bits.SAMP = 0;
     while (AD1CON1bits.DONE == 0){};
     return ADC1BUF0;
+
 }
 
-
+void read_rotorpos(void){
+    rotorpos = readSPI();
+}
 
 /*
  The entire thing that commutates the motor *should be in a single* ISR
@@ -227,7 +244,6 @@ int main(void)
     UART_initing();
     UART2_start();
    
-   // SPI_init();
     
     
     timer1setup();
@@ -243,23 +259,31 @@ int main(void)
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
+    
+    INTCON1bits.NSTDIS = 0;
      initadc1();
      SPI_init();
     printf("ABCDEDF!\n");
+    //can use Lat flags befor and after the motor run loop to test if timing is
+    //correct!
     while (1)
     {
-      //  _LATE14 = ~_LATE14;
-      //  __delay_us(476);
+        //_LATE14 = ~_LATE14;
+       //__delay32(173);
        
-       // AD1CON1bits.SAMP = 1;
-      //  __delay_us(50);
-      //  AD1CON1bits.SAMP = 0;
-     //   while (AD1CON1bits.DONE == 0){};
-        //ADCvalue = sampling1();
+      
         //Delay_us(1000);
-       // printf("ADC:%u \n", ADCvalue);
-        rotorpos = readSPI();  //just testing
-        //printf("%u\n", rotorpos); //apparently this line takes 5ms to send, interesting
+        
+        _LATE14 = 1;
+        if(start_read_pos == 1){
+            rotorpos = readSPI();  //just testing
+            
+            ADCvalue = sampling1();
+            start_read_pos = 0;
+            _LATE14 = 0;
+        }
+      // printf("ADC:%u \n", ADCvalue);
+       //printf("%u\n", rotorpos); //apparently this line takes 5ms to send, interesting
         //__delay_us(20);
     }
     return 1; 
@@ -271,10 +295,14 @@ unsigned int readSPI(){
     //i think at FCY of 4M, since each cycle is 250 ns, i dont have to put a delay. The instruction cycles will cover the needed delay by the encoder
     
    //Csn pin for encoder has to be active for at least 500ns
+    //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
+    //so 173 equals 5000 ns (5us). According to datasheet, Tclkfe (time after Csn before clock starts)
+    //is 500ns, so to be safe, __delay(32) 18? But experiments say it works even without!
     _LATC13 = 1;
-    __delay_us(1); //greater than 500 ns?
+    __delay32(1);
+    
     _LATC13 = 0;
-     __delay_us(1);       
+    __delay32(1);
     //then activate clock signal after the CSnpulse but there must be some delay of 500ns
     //i dont think the delay is needed because writing to the SPI1BUF register may take at least 1 cycle...
     SPI1BUF = 0x0000;   //starts the clock signal

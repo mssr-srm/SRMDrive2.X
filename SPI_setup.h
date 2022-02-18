@@ -29,6 +29,6 @@ void SPI_init(){
     SPI1STATbits.SPIEN = 1; // Enable SPI module
 
 // Interrupt Controller Settings
- //   IFS0bits.SPI1IF = 0; // Clear the Interrupt flag
-  //  IEC0bits.SPI1IE = 1; // Enable the interrupt
+    IFS0bits.SPI1IF = 0; // Clear the Interrupt flag
+    IEC0bits.SPI1IE = 0; // Enable the interrupt
 }
