@@ -162,13 +162,13 @@ section                    address   length (PC units)   length (bytes) (dec)
 -------                    -------   -----------------   --------------------
 .text                        0x200               0xdfa          0x14f7  (5367)
 .const                       0xffa                0x28            0x3c  (60)
-.text                       0x1022               0x3a0           0x570  (1392)
-.dinit                      0x13c2                0xb8           0x114  (276)
-.text                       0x147a               0x12a           0x1bf  (447)
-.init.delay32               0x15a4                0x1c            0x2a  (42)
-.text                       0x15c0                0x1e            0x2d  (45)
+.text                       0x1022               0x39c           0x56a  (1386)
+.dinit                      0x13be                0xb8           0x114  (276)
+.text                       0x1476               0x12a           0x1bf  (447)
+.init.delay32               0x15a0                0x1c            0x2a  (42)
+.text                       0x15bc                0x1e            0x2d  (45)
 
-                 Total "program" memory used (bytes):         0x1dcd  (7629) 2%
+                 Total "program" memory used (bytes):         0x1dc7  (7623) 2%
 
 
 "data" Memory  [Origin = 0x1000, Length = 0x4000]
@@ -301,27 +301,27 @@ External Symbols in Program Memory (by address):
                   0x001212                  _sampling1
                   0x00122e                  _read_rotorpos
                   0x001238                  _main
-                  0x00127e                  _readSPI
-                  0x0012ae                  _RESET_GetCause
-                  0x0013ba                  _RESET_CauseClearAll
-                  0x00147a                  _PIN_MANAGER_Initialize
-                  0x0014e8                  _CLOCK_Initialize
-                  0x00153a                  _initadc1
-                  0x001592                  _SYSTEM_Initialize
-                  0x0015a4                  ___delay32
-                  0x0015d8                  _INTERRUPT_Initialize
+                  0x001278                  _readSPI
+                  0x0012aa                  _RESET_GetCause
+                  0x0013b6                  _RESET_CauseClearAll
+                  0x001476                  _PIN_MANAGER_Initialize
+                  0x0014e4                  _CLOCK_Initialize
+                  0x001536                  _initadc1
+                  0x00158e                  _SYSTEM_Initialize
+                  0x0015a0                  ___delay32
+                  0x0015d4                  _INTERRUPT_Initialize
                   0x02ab80                  __FSEC.sec
 
 External Symbols in Program Memory (by name):
 
-                  0x0014e8                  _CLOCK_Initialize
+                  0x0014e4                  _CLOCK_Initialize
                   0x0011f2                  _Delay_us
-                  0x0015d8                  _INTERRUPT_Initialize
-                  0x00147a                  _PIN_MANAGER_Initialize
-                  0x0013ba                  _RESET_CauseClearAll
-                  0x0012ae                  _RESET_GetCause
+                  0x0015d4                  _INTERRUPT_Initialize
+                  0x001476                  _PIN_MANAGER_Initialize
+                  0x0013b6                  _RESET_CauseClearAll
+                  0x0012aa                  _RESET_GetCause
                   0x001112                  _SPI_init
-                  0x001592                  _SYSTEM_Initialize
+                  0x00158e                  _SYSTEM_Initialize
                   0x00108e                  _UART2_start
                   0x001022                  _UART_initing
                   0x00034c                  __AddressError
@@ -348,7 +348,7 @@ External Symbols in Program Memory (by name):
                   0x000e7e                  __Vacopy
                   0x000a1e                  ___Printf_s
                   0x000a28                  ___Putfld_s
-                  0x0015a4                  ___delay32
+                  0x0015a0                  ___delay32
                   0x0008a8                  ___ePrintf_s
                   0x000fee                  ___mulp32eds3
                   0x000fee                  ___mulp32peds3
@@ -369,13 +369,13 @@ External Symbols in Program Memory (by name):
                   0x000630                  _fputs
                   0x000ac4                  _free
                   0x000b28                  _fwrite
-                  0x00153a                  _initadc1
+                  0x001536                  _initadc1
                   0x001238                  _main
                   0x000c36                  _malloc
                   0x000c8a                  _memchr
                   0x0006c0                  _memcpy
                   0x000556                  _puts
-                  0x00127e                  _readSPI
+                  0x001278                  _readSPI
                   0x00122e                  _read_rotorpos
                   0x001212                  _sampling1
                   0x000c9e                  _strchr
@@ -636,7 +636,7 @@ __FALTREG
  *(.comment)
  .comment         0x000000         0x5e c:/program files/microchip/xc16/v1.70/bin/bin/../../lib\liblega-c-elf.a(xfiles.EP_eo)
 
-.debug_info       0x000000       0x508c
+.debug_info       0x000000       0x5084
  *(.debug_info)
  .debug_info      0x000000        0x487 build/default/production/mcc_generated_files/reset.o
  .debug_info      0x000487        0x670 build/default/production/mcc_generated_files/pin_manager.o
@@ -644,8 +644,8 @@ __FALTREG
  .debug_info      0x000c4a        0x4e1 build/default/production/mcc_generated_files/system.o
  .debug_info      0x00112b        0x440 build/default/production/mcc_generated_files/clock.o
  .debug_info      0x00156b        0x625 build/default/production/mcc_generated_files/traps.o
- .debug_info      0x001b90       0x2e2c build/default/production/main.o
- .debug_info      0x0049bc        0x6d0 build/default/production/adc.o
+ .debug_info      0x001b90       0x2e24 build/default/production/main.o
+ .debug_info      0x0049b4        0x6d0 build/default/production/adc.o
  *(.gnu.linkonce.wi.*)
 
 .debug_abbrev     0x000000        0x6ec
@@ -660,7 +660,7 @@ __FALTREG
  .debug_abbrev    0x00046a        0x1bd build/default/production/main.o
  .debug_abbrev    0x000627         0xc5 build/default/production/adc.o
 
-.debug_line       0x000000        0xac7
+.debug_line       0x000000        0xac6
  *(.debug_line)
  .debug_line      0x000000        0x16e build/default/production/mcc_generated_files/reset.o
  .debug_line      0x00016e         0x1a build/default/production/mcc_generated_files/mcc.o
@@ -669,8 +669,8 @@ __FALTREG
  .debug_line      0x00032d        0x16c build/default/production/mcc_generated_files/system.o
  .debug_line      0x000499        0x131 build/default/production/mcc_generated_files/clock.o
  .debug_line      0x0005ca        0x16b build/default/production/mcc_generated_files/traps.o
- .debug_line      0x000735        0x279 build/default/production/main.o
- .debug_line      0x0009ae        0x119 build/default/production/adc.o
+ .debug_line      0x000735        0x278 build/default/production/main.o
+ .debug_line      0x0009ad        0x119 build/default/production/adc.o
 
 .debug_frame      0x000000        0x674
  *(.debug_frame)
@@ -683,14 +683,14 @@ __FALTREG
  .debug_frame     0x0003fe        0x248 build/default/production/main.o
  .debug_frame     0x000646         0x2e build/default/production/adc.o
 
-.debug_str        0x000000        0x1f9
+.debug_str        0x000000        0x1f0
  *(.debug_str)
  .debug_str       0x000000         0x17 build/default/production/mcc_generated_files/reset.o
  .debug_str       0x000017          0xc build/default/production/mcc_generated_files/system.o
  .debug_str       0x000023          0xb build/default/production/mcc_generated_files/clock.o
  .debug_str       0x00002e         0x24 build/default/production/mcc_generated_files/traps.o
- .debug_str       0x000052        0x17a build/default/production/main.o
- .debug_str       0x0001cc         0x2d build/default/production/adc.o
+ .debug_str       0x000052        0x171 build/default/production/main.o
+ .debug_str       0x0001c3         0x2d build/default/production/adc.o
 
 .debug_loc
  *(.debug_loc)
@@ -2466,8 +2466,8 @@ __c30_signature
 .const              0x8ffa         0x28 load address 0x000ffa  
  .const             0x8ffa         0x28 build/default/production/main.o
 
-.text             0x001022        0x3a0
- .text            0x001022        0x28c build/default/production/main.o
+.text             0x001022        0x39c
+ .text            0x001022        0x288 build/default/production/main.o
                   0x001022                  _UART_initing
                   0x00108e                  _UART2_start
                   0x001098                  _uart_receiver
@@ -2482,31 +2482,31 @@ __c30_signature
                   0x001212                  _sampling1
                   0x00122e                  _read_rotorpos
                   0x001238                  _main
-                  0x00127e                  _readSPI
- .text            0x0012ae        0x114 build/default/production/mcc_generated_files/reset.o
-                  0x0012ae                  _RESET_GetCause
-                  0x0012b6                  _RESET_CauseHandler
-                  0x0013ba                  _RESET_CauseClearAll
+                  0x001278                  _readSPI
+ .text            0x0012aa        0x114 build/default/production/mcc_generated_files/reset.o
+                  0x0012aa                  _RESET_GetCause
+                  0x0012b2                  _RESET_CauseHandler
+                  0x0013b6                  _RESET_CauseClearAll
 
-.dinit            0x0013c2         0xb8
- .dinit           0x0013c2         0xb8 data_init
+.dinit            0x0013be         0xb8
+ .dinit           0x0013be         0xb8 data_init
 
-.text             0x00147a        0x12a
- .text            0x00147a         0x6e build/default/production/mcc_generated_files/pin_manager.o
-                  0x00147a                  _PIN_MANAGER_Initialize
- .text            0x0014e8         0x52 build/default/production/mcc_generated_files/clock.o
-                  0x0014e8                  _CLOCK_Initialize
- .text            0x00153a         0x3a build/default/production/adc.o
-                  0x00153a                  _initadc1
- .text            0x001574         0x30 build/default/production/mcc_generated_files/system.o
-                  0x001592                  _SYSTEM_Initialize
+.text             0x001476        0x12a
+ .text            0x001476         0x6e build/default/production/mcc_generated_files/pin_manager.o
+                  0x001476                  _PIN_MANAGER_Initialize
+ .text            0x0014e4         0x52 build/default/production/mcc_generated_files/clock.o
+                  0x0014e4                  _CLOCK_Initialize
+ .text            0x001536         0x3a build/default/production/adc.o
+                  0x001536                  _initadc1
+ .text            0x001570         0x30 build/default/production/mcc_generated_files/system.o
+                  0x00158e                  _SYSTEM_Initialize
 
-.init.delay32     0x0015a4         0x1c
- .init.delay32    0x0015a4         0x1c c:/program files/microchip/xc16/v1.70/bin/bin/../../lib\liblega-pic30-elf.a(delay32ep.Leo)
-                  0x0015a4                  ___delay32
+.init.delay32     0x0015a0         0x1c
+ .init.delay32    0x0015a0         0x1c c:/program files/microchip/xc16/v1.70/bin/bin/../../lib\liblega-pic30-elf.a(delay32ep.Leo)
+                  0x0015a0                  ___delay32
 
-.text             0x0015c0         0x1e
- .text            0x0015c0         0x18 build/default/production/mcc_generated_files/traps.o
-                  0x0015c0                  _TRAPS_halt_on_error
- .text            0x0015d8          0x6 build/default/production/mcc_generated_files/interrupt_manager.o
-                  0x0015d8                  _INTERRUPT_Initialize
+.text             0x0015bc         0x1e
+ .text            0x0015bc         0x18 build/default/production/mcc_generated_files/traps.o
+                  0x0015bc                  _TRAPS_halt_on_error
+ .text            0x0015d4          0x6 build/default/production/mcc_generated_files/interrupt_manager.o
+                  0x0015d4                  _INTERRUPT_Initialize
