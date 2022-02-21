@@ -19,10 +19,7 @@ void initadc1(void){
     AD1CON2 = 0x0000;
     AD1CON3 = 0x000F;
     AD1CON4 = 0x0000;
-   // AD1CHS0 = 0x0013;
-   // AD1CHS0bits.CH0SB = 0x13; //this selects the bit, direct binary to ANx
-    //AD1CHS0bits.CH0NA = 0b0;
-    AD1CHS0bits.CH0SA = 0x13;
+    AD1CHS0bits.CH0SA = 0x13;   //corresponds to AN19, pot on devboard
     AD1CHS123 = 0x0000;
     AD1CSSH = 0x0000;
     AD1CSSL = 0x0000;

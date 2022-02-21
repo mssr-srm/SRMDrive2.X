@@ -266,6 +266,8 @@ int main(void)
     printf("ABCDEDF!\n");
     //can use Lat flags befor and after the motor run loop to test if timing is
     //correct!
+    
+    //LATE14 is the C lower switch! so keep it on for softswitching
     while (1)
     {
         //_LATE14 = ~_LATE14;
