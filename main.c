@@ -260,6 +260,11 @@ int main(void)
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
     
+    unsigned int rot_max = 4095;    //this is the maximum value of the sensor 12 bits
+    unsigned int rot_offset = 1000; //so that the unaligned position is correct
+    unsigned int rot_adj = 0;       //adjust zero rotor position
+    float angle_scale = 0.08791208791;  //scaling factor for 12bit position sensor
+    
     INTCON1bits.NSTDIS = 0;
      initadc1();
      SPI_init();
@@ -286,14 +291,23 @@ int main(void)
         if(start_read_pos == 1){
             
             rotorpos = readSPI();  //just testing
+            
+            //the next if else just moves the 0 deg position somewhere else while
+            //maintaining "circularity" i.e. the new 4095 is the previous 999 when the offset is 1000.
+            if (rotorpos >= rot_offset){
+                rot_adj = rotorpos - rot_offset;
+            }
+            else{
+                rot_adj = rot_max + 1 + (rotorpos - rot_offset);
+            }
             _LATE14 = 1;
             ADCvalue = sampling1();
             start_read_pos = 0;
             //__delay_us(100);
             _LATE14 = 0;
         }
-       printf("ADC:%u \n", ADCvalue);
-       //printf("%u\n", rotorpos); //apparently this line takes 5ms to send, interesting
+       //printf("ADC:%u \n", ADCvalue);
+       printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
         //__delay_us(20);
     }
     return 1; 
