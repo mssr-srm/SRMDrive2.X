@@ -24,7 +24,7 @@
 
 unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
-unsigned int rotorpos = 0;
+uint16_t rotorpos = 0;
 
 int start_read_pos = 0;
 
@@ -45,6 +45,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //SPI1BUF = 0x0000;   //starts the clock signal
     start_read_pos =1;
     _LATE15 = ~_LATE15;
+    _LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
 }
 
@@ -78,7 +79,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
-    PR1 = 1000;
+    PR1 = 65530; //1000
     T1CONbits.TCKPS = 0x0000;
     
     //interrupt
@@ -248,22 +249,25 @@ int main(void)
     
     timer1setup();
     
+    _TRISC4 = 0;    //LED output
     _TRISC13 = 0;   //output for Csn for position sensor
     _TRISE14 = 0;   //output for C lower switch
     _TRISE15 = 0;   //output for C upper switch
     _TRISG6 = 1;    //input for ADC
     _TRISG8 = 0;    //output for devboard pot source
     
+    _LATC4 = 0;
     _LATC13 = 1;    //initially on
     _LATE14 = 1;    //on initially
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
     
-    unsigned int rot_max = 4095;    //this is the maximum value of the sensor 12 bits
-    unsigned int rot_offset = 1000; //so that the unaligned position is correct
-    unsigned int rot_adj = 0;       //adjust zero rotor position
-    float angle_scale = 0.08791208791;  //scaling factor for 12bit position sensor
+    int rot_max = 1023;    //this is the maximum value of the sensor 12 bits
+    int rot_offset = 819; //so that the unaligned position is correct
+    int rot_adj = 0;       //adjust zero rotor position
+    float angle_scale = 0.35190615835;  //scaling factor for 12bit position sensor
+    uint16_t rp = 0x0000;
     
     INTCON1bits.NSTDIS = 0;
      initadc1();
@@ -288,17 +292,24 @@ int main(void)
          * SPI freq is 1.25 MHz, period 800ns. x16 = 12800 ns = 12.8us. Close enough.
          * DS0032 to DS0034
          */
+       
         if(start_read_pos == 1){
             
             rotorpos = readSPI();  //just testing
+            rp = rotorpos;
+            rp = (rp & 0xFF00) >> 8 | (rp & 0x00FF) << 8;
+            rp = (rp & 0xF0F0) >> 4 | (rp & 0x0F0F) << 4;
+            rp = (rp & 0xCCCC) >> 2 | (rp & 0x3333) << 2;
+            rp = (rp & 0xAAAA) >> 1 | (rp & 0x5555) << 1;
+            rp = rp >>2;
             
             //the next if else just moves the 0 deg position somewhere else while
             //maintaining "circularity" i.e. the new 4095 is the previous 999 when the offset is 1000.
             if (rotorpos >= rot_offset){
-                rot_adj = rotorpos - rot_offset;
+                rot_adj = (int)rotorpos - rot_offset;
             }
             else{
-                rot_adj = rot_max + 1 + (rotorpos - rot_offset);
+                rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
             }
             _LATE14 = 1;
             ADCvalue = sampling1();
@@ -307,13 +318,16 @@ int main(void)
             _LATE14 = 0;
         }
        //printf("ADC:%u \n", ADCvalue);
-       printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+     // printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+        printf("%u\n",rotorpos & 0x003F);
+        //printf("%u\n",rp);
+       // printf("%f\n", rot_adj);
         //__delay_us(20);
     }
     return 1; 
 }
 
-unsigned int readSPI(){
+uint16_t readSPI(){
     //need to add Csn pulses before reading. I think this will trigger the sensor to release data
     //i think it also needs to clear the recv bit after or before reading so dspic can work
     //i think at FCY of 4M, since each cycle is 250 ns, i dont have to put a delay. The instruction cycles will cover the needed delay by the encoder
@@ -338,7 +352,7 @@ unsigned int readSPI(){
    // _LATC13 = 1;
     recv_position =  SPI1BUF;    //copy only the lower twelve bits
  
-    recv_position =  0x0FFF & recv_position;
+    //recv_position =  0x03FF & recv_position;
    // SPI1STATbits.SPIRBF = 0b0;
     return  recv_position;
    
