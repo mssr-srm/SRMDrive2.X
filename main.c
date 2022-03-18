@@ -80,7 +80,7 @@ void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
     PR1 = 65530; //1000
-    T1CONbits.TCKPS = 0x0000;
+    T1CONbits.TCKPS = 0x11; //0x0000;
     
     //interrupt
     IPC0bits.T1IP = 7;
@@ -263,10 +263,10 @@ int main(void)
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
     
-    int rot_max = 1023;    //this is the maximum value of the sensor 12 bits
-    int rot_offset = 819; //so that the unaligned position is correct
+    int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
+    int rot_offset = 425; //so that the unaligned position is correct
     int rot_adj = 0;       //adjust zero rotor position
-    float angle_scale = 0.35190615835;  //scaling factor for 12bit position sensor
+    float angle_scale = 360.0/rot_max;  //scaling factor for 12bit position sensor
     uint16_t rp = 0x0000;
     
     INTCON1bits.NSTDIS = 0;
@@ -302,10 +302,10 @@ int main(void)
             rp = (rp & 0xCCCC) >> 2 | (rp & 0x3333) << 2;
             rp = (rp & 0xAAAA) >> 1 | (rp & 0x5555) << 1;
             rp = rp >>2;
-            
+          
             //the next if else just moves the 0 deg position somewhere else while
             //maintaining "circularity" i.e. the new 4095 is the previous 999 when the offset is 1000.
-            if (rotorpos >= rot_offset){
+            if ((unsigned int) rotorpos >= rot_offset){
                 rot_adj = (int)rotorpos - rot_offset;
             }
             else{
@@ -318,10 +318,10 @@ int main(void)
             _LATE14 = 0;
         }
        //printf("ADC:%u \n", ADCvalue);
-     // printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
-        printf("%u\n",rotorpos & 0x003F);
+     printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+        //printf("%u\n",rotorpos);
         //printf("%u\n",rp);
-       // printf("%f\n", rot_adj);
+       //printf("%u\n", rot_adj);
         //__delay_us(20);
     }
     return 1; 
@@ -354,6 +354,6 @@ uint16_t readSPI(){
  
     //recv_position =  0x03FF & recv_position;
    // SPI1STATbits.SPIRBF = 0b0;
-    return  recv_position;
+    return  recv_position >> 4; //this bit shifting seems to work for the 10 bit sensor somehow
    
 }
