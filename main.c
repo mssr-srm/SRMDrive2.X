@@ -44,7 +44,8 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //__delay32(1);
     //SPI1BUF = 0x0000;   //starts the clock signal
     start_read_pos =1;
-    _LATE15 = ~_LATE15;
+    _LATE14 = ~_LATE14; //soft switching upper switch works
+    _LATE15 = 1;        //soft switching lower switch always on
     _LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
 }
@@ -79,8 +80,8 @@ void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
-    PR1 = 65530; //1000
-    T1CONbits.TCKPS = 0x11; //0x0000;
+    PR1 = 1000; //1000
+    T1CONbits.TCKPS = 0x00; //0x0000;
     
     //interrupt
     IPC0bits.T1IP = 7;
@@ -295,7 +296,7 @@ int main(void)
        
         if(start_read_pos == 1){
             
-            rotorpos = readSPI();  //just testing
+           /* rotorpos = readSPI();  //just testing
             rp = rotorpos;
             rp = (rp & 0xFF00) >> 8 | (rp & 0x00FF) << 8;
             rp = (rp & 0xF0F0) >> 4 | (rp & 0x0F0F) << 4;
@@ -310,15 +311,15 @@ int main(void)
             }
             else{
                 rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
-            }
+            }*/
             _LATE14 = 1;
             ADCvalue = sampling1();
             start_read_pos = 0;
             //__delay_us(100);
             _LATE14 = 0;
         }
-       //printf("ADC:%u \n", ADCvalue);
-     printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+       printf("ADC:%u \n", ADCvalue);
+     //printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
         //printf("%u\n",rotorpos);
         //printf("%u\n",rp);
        //printf("%u\n", rot_adj);
