@@ -44,7 +44,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //__delay32(1);
     //SPI1BUF = 0x0000;   //starts the clock signal
     start_read_pos =1;
-    _LATE14 = ~_LATE14; //soft switching upper switch works
+    _LATE14 = 1; //soft switching upper switch works
     _LATE15 = 1;        //soft switching lower switch always on
     _LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
@@ -259,7 +259,9 @@ int main(void)
     
     _LATC4 = 0;
     _LATC13 = 1;    //initially on
-    _LATE14 = 1;    //on initially
+    
+    //FOR SAFETY turn both switches off at start up.
+    _LATE14 = 0;    //off initially
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
@@ -278,6 +280,9 @@ int main(void)
     //correct!
     
     //LATE14 is the C lower switch! so keep it on for softswitching
+    //FOR SAFETY turn both switches off at start up.
+    _LATE14 = 0;    //off initially
+    _LATE15 = 0;    //off initially
     while (1)
     {
         //_LATE14 = ~_LATE14;
@@ -314,7 +319,7 @@ int main(void)
             }*/
             _LATE14 = 1;
             ADCvalue = sampling1();
-            start_read_pos = 0;
+            //start_read_pos = 0;
             //__delay_us(100);
             _LATE14 = 0;
         }
