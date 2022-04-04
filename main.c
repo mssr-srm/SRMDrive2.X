@@ -29,9 +29,17 @@ uint16_t rotorpos = 0;
 int start_read_pos = 0;
 
 unsigned int readSPI(void);
-
+unsigned int sampling1(void);
 void read_rotorpos(void);
 
+//according to measurements taken 04/04/2022, the trendlines are:
+//curr vs voltage 1: y = 0.1626x + 2.4696   R2 = 0.9995
+//curr vs voltage 2: y = 0.1647x + 2.4708   R2 = 1
+//curr vs bits 1:    y = 132.37x + 1997.3   R2 = 0.9995
+//curr vs bits 2:    y = 134.96x + 1995.8   R2  =0.9997
+//voltage vs bits 1: y = 813.93x - 12.71    R2 = 0.9992
+//voltage vs bits 2: y = 819.43x - 28.813   R2 = 0.9996
+//ideally, at 0 A, Vcc/2 = 2.5 V
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //Csn pin for encoder has to be active for at least 500ns
     //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
@@ -43,6 +51,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //_LATC13 = 0;
     //__delay32(1);
     //SPI1BUF = 0x0000;   //starts the clock signal
+     ADCvalue = sampling1();
     start_read_pos =1;
     _LATE14 = 1; //soft switching upper switch works
     _LATE15 = 1;        //soft switching lower switch always on
@@ -318,7 +327,7 @@ int main(void)
                 rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
             }*/
             _LATE14 = 1;
-            ADCvalue = sampling1();
+           // ADCvalue = sampling1();
             //start_read_pos = 0;
             //__delay_us(100);
             _LATE14 = 0;
