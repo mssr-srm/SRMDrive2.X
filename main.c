@@ -53,7 +53,15 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //SPI1BUF = 0x0000;   //starts the clock signal
      ADCvalue = sampling1();
     start_read_pos =1;
-    _LATE14 = 1; //soft switching upper switch works
+    if (ADCvalue > 2200){
+        _LATE14 = 0;
+    }
+    else if (ADCvalue < 2190){
+        _LATE14 = 1;
+    }
+        
+    //for debugging always set E14 to 1
+    //_LATE14 = 1;        //soft switching upper switch works
     _LATE15 = 1;        //soft switching lower switch always on
     _LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
@@ -326,13 +334,13 @@ int main(void)
             else{
                 rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
             }*/
-            _LATE14 = 1;
+           // _LATE14 = 1;
            // ADCvalue = sampling1();
             //start_read_pos = 0;
             //__delay_us(100);
-            _LATE14 = 0;
+           // _LATE14 = 0;
         }
-       printf("ADC:%u \n", ADCvalue);
+      // printf("ADC:%u \n", ADCvalue);
      //printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
         //printf("%u\n",rotorpos);
         //printf("%u\n",rp);
