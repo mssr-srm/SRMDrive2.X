@@ -53,10 +53,11 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //SPI1BUF = 0x0000;   //starts the clock signal
      ADCvalue = sampling1();
     start_read_pos =1;
-    if (ADCvalue > 2200){
+    //2195<x<2200 results in 1.5A
+    if (ADCvalue > 2270){
         _LATE14 = 0;
     }
-    else if (ADCvalue < 2190){
+    else if (ADCvalue < 2265){  //used to be 2190
         _LATE14 = 1;
     }
         

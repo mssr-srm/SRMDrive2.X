@@ -921,7 +921,7 @@ __FALTREG
  .debug_abbrev    0x00046a        0x1e5 build/default/production/main.o
  .debug_abbrev    0x00064f         0xc5 build/default/production/adc.o
 
-.debug_line       0x000000        0xadf
+.debug_line       0x000000        0xae0
  *(.debug_line)
  .debug_line      0x000000        0x16e build/default/production/mcc_generated_files/reset.o
  .debug_line      0x00016e         0x1a build/default/production/mcc_generated_files/mcc.o
@@ -930,8 +930,8 @@ __FALTREG
  .debug_line      0x00032d        0x16c build/default/production/mcc_generated_files/system.o
  .debug_line      0x000499        0x131 build/default/production/mcc_generated_files/clock.o
  .debug_line      0x0005ca        0x16b build/default/production/mcc_generated_files/traps.o
- .debug_line      0x000735        0x290 build/default/production/main.o
- .debug_line      0x0009c5        0x11a build/default/production/adc.o
+ .debug_line      0x000735        0x291 build/default/production/main.o
+ .debug_line      0x0009c6        0x11a build/default/production/adc.o
 
 .debug_frame      0x000000        0x696
  *(.debug_frame)
