@@ -54,10 +54,11 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
      ADCvalue = sampling1();
     start_read_pos =1;
     //2195<x<2200 results in 1.5A
-    if (ADCvalue > 2270){
+    //2265<x<2270 results in 2.0A
+    if (ADCvalue > 2200){
         _LATE14 = 0;
     }
-    else if (ADCvalue < 2265){  //used to be 2190
+    else if (ADCvalue < 2195){  //used to be 2190
         _LATE14 = 1;
     }
         
