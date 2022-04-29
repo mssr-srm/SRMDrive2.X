@@ -53,12 +53,15 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //SPI1BUF = 0x0000;   //starts the clock signal
      ADCvalue = sampling1();
     start_read_pos =1;
-    //2195<x<2200 results in 1.5A
+    //2190<x<2195 results in 1.5A
     //2265<x<2270 results in 2.0A
-    if (ADCvalue > 2200){
-        _LATE14 = 0;
+    //2325<x<2330, test next lower, results 2.5A?
+    //2395<x<2405, 3.0A
+    //2530<x<2540, 4.0A
+    if (ADCvalue > 2675){
+        _LATE14 =0;// switch off sometimes!
     }
-    else if (ADCvalue < 2195){  //used to be 2190
+    else if (ADCvalue < 2667){  //used to be 2190
         _LATE14 = 1;
     }
         
@@ -342,7 +345,7 @@ int main(void)
             //__delay_us(100);
            // _LATE14 = 0;
         }
-      // printf("ADC:%u \n", ADCvalue);
+       //printf("ADC:%u \n", ADCvalue);
      printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
         //printf("%u\n",rotorpos);
         //printf("%u\n",rp);
