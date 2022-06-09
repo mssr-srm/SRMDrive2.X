@@ -58,6 +58,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //2325<x<2330, test next lower, results 2.5A?
     //2395<x<2405, 3.0A
     //2530<x<2540, 4.0A
+    //2667<x<2675, 5.0A?
     if (ADCvalue > 2675){
         _LATE14 =0;// switch off sometimes!
     }
