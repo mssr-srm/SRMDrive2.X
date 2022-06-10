@@ -24,6 +24,17 @@
 
 unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
+unsigned int ADCvalue2 = 0;
+unsigned int ADCvalue3 = 0;
+
+unsigned int PhA_Ihigh = 0;
+unsigned int PhB_Ihigh = 0;
+unsigned int PhC_Ihigh = 0;
+
+unsigned int PhA_Ilow = 0;
+unsigned int PhB_Ilow = 0;
+unsigned int PhC_Ilow = 0;
+
 uint16_t rotorpos = 0;
 
 int start_read_pos = 0;
@@ -43,8 +54,52 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //_LATC13 = 0;
     //__delay32(1);
     //SPI1BUF = 0x0000;   //starts the clock signal
+<<<<<<< Updated upstream
     start_read_pos =1;
     _LATE15 = ~_LATE15;
+=======
+    AD1CHS0bits.CH0SA = 0x10; //RG9 = AN16
+     ADCvalue = sampling1();
+     AD1CHS0bits.CH0SA = 0x00;//RA0= AN0
+     ADCvalue2 = sampling1();
+     AD1CHS0bits.CH0SA = 0x18; //RA4 = AN24
+     ADCvalue3 = sampling1();
+    start_read_pos =1;
+    
+    
+    //2190<x<2195 results in 1.5A
+    //2265<x<2270 results in 2.0A
+    //2325<x<2330, test next lower, results 2.5A?
+    //2395<x<2405, 3.0A
+    //2530<x<2540, 4.0A
+    //2667<x<2675, 5.0A?
+    
+    PhC_Ihigh = 2675;
+    PhC_Ilow = 2667;
+    if (ADCvalue > PhC_Ihigh){
+        _LATE14 =0;// switch off sometimes!
+    }
+    else if (ADCvalue < PhC_Ilow){  //used to be 2190
+        _LATE14 = 1;
+    }
+    //A control
+    if (ADCvalue2 > 2195){
+    
+    }
+    else if (ADCvalue2 < 2190){
+    
+    }
+    //B control
+    if (ADCvalue3){
+    
+    }
+ 
+    //for debugging always set E14 to 1
+    //_LATE14 = 1;        //soft switching upper switch works
+    _LATC9 = 1;         //soft switching A lower switch always on
+    _LATC7 = 1;         //soft switching B lower switch always on
+    _LATE15 = 1;        //soft switching C lower switch always on
+>>>>>>> Stashed changes
     _LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
 }
@@ -250,6 +305,10 @@ int main(void)
     timer1setup();
     
     _TRISC4 = 0;    //LED output
+    _TRISC6 = 0;    //output for B upper switch
+    _TRISC7 = 0;    //output for B lower switch
+    _TRISC8 = 0;    //output for A upper switch
+    _TRISC9 = 0;    //output for A lower switch
     _TRISC13 = 0;   //output for Csn for position sensor
     _TRISE14 = 0;   //output for C lower switch
     _TRISE15 = 0;   //output for C upper switch
@@ -258,7 +317,17 @@ int main(void)
     
     _LATC4 = 0;
     _LATC13 = 1;    //initially on
+<<<<<<< Updated upstream
     _LATE14 = 1;    //on initially
+=======
+    
+    //FOR SAFETY turn both switches off at start up.
+    _LATC6 = 0;     //off
+    _LATC7 = 0;     //off
+    _LATC8 = 0;     //off
+    _LATC9 = 0;     //off 
+    _LATE14 = 0;    //off initially
+>>>>>>> Stashed changes
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
@@ -317,7 +386,7 @@ int main(void)
             //__delay_us(100);
             _LATE14 = 0;
         }
-       //printf("ADC:%u \n", ADCvalue);
+       printf("ADC:%u \n ADC2: %u \n ADC3: %u\n", ADCvalue, ADCvalue2, ADCvalue3);
      printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
         //printf("%u\n",rotorpos);
         //printf("%u\n",rp);
