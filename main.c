@@ -15,7 +15,7 @@
 #include "uart_funcs.h"
 #include "adc.h"
 #include "SPI_setup.h"
-
+#include "PWMcontrols.h"
 
 
 /*
@@ -40,32 +40,63 @@ uint16_t rotorpos = 0;
 int start_read_pos = 0;
 
 unsigned int readSPI(void);
-
 void read_rotorpos(void);
+unsigned int sampling1();
 
+int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
+int rot_offset = 425; //so that the unaligned position is correct
+int rot_adj = 0;       //adjust zero rotor position
+float angle_scale = 360.0/2047;  //scaling factor for 12bit position sensor
+uint16_t rp = 0x0000;
+
+//signals to turn on coils
+int sigA = 0;
+int sigB = 0;
+int sigC = 0;
+
+//according to measurements taken 04/04/2022, the trendlines are:
+//curr vs voltage 1: y = 0.1626x + 2.4696   R2 = 0.9995
+//curr vs voltage 2: y = 0.1647x + 2.4708   R2 = 1
+//curr vs bits 1:    y = 132.37x + 1997.3   R2 = 0.9995
+//curr vs bits 2:    y = 134.96x + 1995.8   R2  =0.9997
+//voltage vs bits 1: y = 813.93x - 12.71    R2 = 0.9992
+//voltage vs bits 2: y = 819.43x - 28.813   R2 = 0.9996
+//ideally, at 0 A, Vcc/2 = 2.5 V
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //Csn pin for encoder has to be active for at least 500ns
     //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
     //so 173 equals 5000 ns (5us). According to datasheet, Tclkfe (time after Csn before clock starts)
     //is 500ns, so to be safe, __delay(32) 18? But experiments say it works even without!
-    //_LATC13 = 1;
     //__delay32(1);
     
-    //_LATC13 = 0;
+  
     //__delay32(1);
-    //SPI1BUF = 0x0000;   //starts the clock signal
-<<<<<<< Updated upstream
-    start_read_pos =1;
-    _LATE15 = ~_LATE15;
-=======
-    AD1CHS0bits.CH0SA = 0x10; //RG9 = AN16
-     ADCvalue = sampling1();
-     AD1CHS0bits.CH0SA = 0x00;//RA0= AN0
-     ADCvalue2 = sampling1();
-     AD1CHS0bits.CH0SA = 0x18; //RA4 = AN24
-     ADCvalue3 = sampling1();
-    start_read_pos =1;
-    
+   
+    //sigA = 1;
+    //sigB = 0;
+    //sigC = 0;
+    //start_read_pos =1;
+    if (sigA == 1){
+        AD1CHS0bits.CH0SA = 0x18; //RA4 = AN24
+        ADCvalue2 = sampling1();
+    }
+    else{
+        ADCvalue2 = 20000;
+    }
+    if (sigB == 1){
+        AD1CHS0bits.CH0SA = 0x00;//RA0= AN0
+        ADCvalue3 = sampling1();
+    }
+    else{
+        ADCvalue3 = 20000;
+    }
+    if (sigC == 1){
+        AD1CHS0bits.CH0SA = 0x10; //RG9 = AN16
+        ADCvalue = sampling1();
+    }
+    else{
+        ADCvalue = 20000;
+    }
     
     //2190<x<2195 results in 1.5A
     //2265<x<2270 results in 2.0A
@@ -73,40 +104,127 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //2395<x<2405, 3.0A
     //2530<x<2540, 4.0A
     //2667<x<2675, 5.0A?
+   // _LATC8 = ~_LATC8;
+    //_LATC6 = ~_LATC6;
+    /*
+     * angle is scaled such that 360 =2048... divided by 8 = 256
+     * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
+     */
+    PhA_Ihigh = 2195;
+    PhB_Ihigh = 2195;
+    PhC_Ihigh = 2195;
     
-    PhC_Ihigh = 2675;
-    PhC_Ilow = 2667;
+    PhA_Ilow = 2190;
+    PhB_Ilow = 2190;
+    PhC_Ilow = 2190;
+    /*
+    if(sigA == 1){
+        _LATC8 = ~_LATC8;
+    }
+    else if(sigA == 0){
+        _LATC8 = 0;
+    }
+    
+    if(sigB == 1){
+        _LATC6 = ~_LATC6;
+    }
+    else if(sigB == 0){
+        _LATC6 = 0;
+    }
+    
+    if(sigC == 1){
+        _LATE14 = ~_LATE14;
+    }
+    else if(sigC == 0){
+        _LATE14 = 0;
+    }
+    */
+    //sigA = 1;
+    //sigB = 0;
+    //sigC = 0;
+    
     if (ADCvalue > PhC_Ihigh){
         _LATE14 =0;// switch off sometimes!
     }
-    else if (ADCvalue < PhC_Ilow){  //used to be 2190
+    else if ((ADCvalue < PhC_Ilow) && (sigC == 1)){  //used to be 2190
         _LATE14 = 1;
     }
+    
     //A control
-    if (ADCvalue2 > 2195){
-    
+    if (ADCvalue2 > PhA_Ihigh){
+        _LATC8 = 0;
     }
-    else if (ADCvalue2 < 2190){
-    
+    else if ((ADCvalue2 < PhA_Ilow) && (sigA == 1)){
+        _LATC8 = 1;
     }
+    
     //B control
-    if (ADCvalue3){
-    
+    if (ADCvalue3 > PhB_Ihigh){
+        _LATC6 = 0;
     }
- 
-    //for debugging always set E14 to 1
-    //_LATE14 = 1;        //soft switching upper switch works
+    else if ((ADCvalue3 < PhB_Ilow) && (sigB == 1)){
+        _LATC6 = 1;
+    }
+    
+    
+    //_LATC6 = ~_LATC6;
+    //_LATE14 = ~_LATE14;
     _LATC9 = 1;         //soft switching A lower switch always on
     _LATC7 = 1;         //soft switching B lower switch always on
     _LATE15 = 1;        //soft switching C lower switch always on
->>>>>>> Stashed changes
-    _LATC4 = ~_LATC4;
+    //_LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
 }
 
+int sw_rng = 102;     //window which signal is open; 18*5.6889 = 102.4002
+int sw_rng05 = 51;      //for phase C only
+int sw_brd = 256;    //window of neighboring intervals; 45*5.6889
+int strtA = 15;     //2.5*5.6889 =  14.2225
+int strtB = 103;    //18*5.6889 = 102.4002
+int strtC= 182;      //32*5.6889 =  182.0448
+
 void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
+    rotorpos = readSPI();  //just testing
+    
+    //the next if else just moves the 0 deg position somewhere else while
+    //maintaining "circularity" i.e. the new 4095 is the previous 999 when the offset is 1000.
+    if ((unsigned int) rotorpos >= rot_offset){
+        rot_adj = (int)rotorpos - rot_offset;
+    }
+    else{
+        rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
+     }
     
     
+    //divide into two for readability?
+    if ((rot_adj >= strtA && rot_adj<=(strtA+sw_rng)) || (rot_adj >= (strtA+sw_brd) && rot_adj<=(strtA+sw_brd+sw_rng)) || (rot_adj >= (strtA+2*sw_brd) && rot_adj<=(strtA+2*sw_brd+sw_rng)) 
+            || (rot_adj >= (strtA+3*sw_brd) && rot_adj<=(strtA+3*sw_brd+sw_rng)) || (rot_adj >= (strtA+4*sw_brd) && rot_adj<=(strtA+4*sw_brd+sw_rng)) || (rot_adj >= (strtA+5*sw_brd) && rot_adj<=(strtA+5*sw_brd+sw_rng))
+            || (rot_adj >= (strtA+6*sw_brd) && rot_adj<=(strtA+6*sw_brd+sw_rng)) || (rot_adj >= (strtA+7*sw_brd) && rot_adj<=(strtA+7*sw_brd+sw_rng))){
+        sigA = 1;
+    }
+    else{
+        sigA = 0;
+    }
+    
+    if ((rot_adj >= strtB && rot_adj<=(strtB+sw_rng)) || (rot_adj >= (strtB+sw_brd) && rot_adj<=(strtB+sw_brd+sw_rng)) || (rot_adj >= (strtB+2*sw_brd) && rot_adj<=(strtB+2*sw_brd+sw_rng)) 
+            || (rot_adj >= (strtB+3*sw_brd) && rot_adj<=(strtB+3*sw_brd+sw_rng)) || (rot_adj >= (strtB+4*sw_brd) && rot_adj<=(strtB+4*sw_brd+sw_rng)) || (rot_adj >= (strtB+5*sw_brd) && rot_adj<=(strtB+5*sw_brd+sw_rng))
+            || (rot_adj >= (strtB+6*sw_brd) && rot_adj<=(strtB+6*sw_brd+sw_rng)) || (rot_adj >= (strtB+7*sw_brd) && rot_adj<=(strtB+7*sw_brd+sw_rng))){
+        sigB = 1;
+    }
+    else{
+        sigB = 0;
+    }
+    
+    if ((rot_adj >= 0 && rot_adj<=(sw_rng05)) || (rot_adj >= (strtC+sw_brd) && rot_adj<=(strtC+sw_brd+sw_rng)) || (rot_adj >= (strtC+2*sw_brd) && rot_adj<=(strtC+2*sw_brd+sw_rng)) 
+            || (rot_adj >= (strtC+3*sw_brd) && rot_adj<=(strtC+3*sw_brd+sw_rng)) || (rot_adj >= (strtC+4*sw_brd) && rot_adj<=(strtC+4*sw_brd+sw_rng)) || (rot_adj >= (strtC+5*sw_brd) && rot_adj<=(strtC+5*sw_brd+sw_rng))
+            || (rot_adj >= (strtC+6*sw_brd) && rot_adj<=(strtC+6*sw_brd+sw_rng)) || (rot_adj >= (strtC+7*sw_brd))){
+        sigC = 1;
+    }
+    else{
+        sigC = 0;
+    }
+
+    //_LATC4 = ~_LATC4;
     IFS0bits.T2IF = 0;
 }
 
@@ -134,8 +252,8 @@ void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
 void timer1setup(){
     T1CON = 0x0000;
     TMR1 = 0x0000;
-    PR1 = 65530; //1000
-    T1CONbits.TCKPS = 0x11; //0x0000;
+    PR1 = 1000;
+    T1CONbits.TCKPS = 0b00; //0x0000;
     
     //interrupt
     IPC0bits.T1IP = 7;
@@ -147,10 +265,13 @@ void timer1setup(){
 }
 
 void timer2setup(){
+    
+    //when TCKPS is 0b10 (1:64), 1000 is equal to approx 312.2 Hz (theo 312.5)
+    //so PR2 = 312 = 1 Khz
     T2CON = 0x0000;
     TMR2 = 0x0000;
-    PR2 = 15625;
-    T2CONbits.TCKPS = 0b0011;
+    PR2 = 312;
+    T2CONbits.TCKPS = 0b10; //used to be 0b0011;
     
     //interrupts
     IPC1bits.T2IP = 7;
@@ -158,7 +279,7 @@ void timer2setup(){
     IEC0bits.T2IE = 1;
     
     //turn on
-    T2CONbits.TON;
+    T2CONbits.TON = 1;
 }
 
 void timer3setup(){
@@ -299,11 +420,12 @@ int main(void)
     SYSTEM_Initialize();
     UART_initing();
     UART2_start();
-   
-    
-    
+      
     timer1setup();
+    timer2setup();
     
+    _TRISB14 = 0;
+    _TRISB15 = 0;
     _TRISC4 = 0;    //LED output
     _TRISC6 = 0;    //output for B upper switch
     _TRISC7 = 0;    //output for B lower switch
@@ -317,9 +439,6 @@ int main(void)
     
     _LATC4 = 0;
     _LATC13 = 1;    //initially on
-<<<<<<< Updated upstream
-    _LATE14 = 1;    //on initially
-=======
     
     //FOR SAFETY turn both switches off at start up.
     _LATC6 = 0;     //off
@@ -327,16 +446,12 @@ int main(void)
     _LATC8 = 0;     //off
     _LATC9 = 0;     //off 
     _LATE14 = 0;    //off initially
->>>>>>> Stashed changes
+
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
     
-    int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
-    int rot_offset = 425; //so that the unaligned position is correct
-    int rot_adj = 0;       //adjust zero rotor position
-    float angle_scale = 360.0/rot_max;  //scaling factor for 12bit position sensor
-    uint16_t rp = 0x0000;
+    initPWM();
     
     INTCON1bits.NSTDIS = 0;
      initadc1();
@@ -348,11 +463,7 @@ int main(void)
     //LATE14 is the C lower switch! so keep it on for softswitching
     while (1)
     {
-        //_LATE14 = ~_LATE14;
        //__delay32(173);
-       
-      
-        //Delay_us(1000);
         
         /*According to oscilloscope measurements, with simple t1 trigger to if 
          * below and nothing else, from the moment it is triggered, it takes
@@ -361,16 +472,16 @@ int main(void)
          * SPI freq is 1.25 MHz, period 800ns. x16 = 12800 ns = 12.8us. Close enough.
          * DS0032 to DS0034
          */
-       
+       /*
         if(start_read_pos == 1){
             
             rotorpos = readSPI();  //just testing
-            rp = rotorpos;
-            rp = (rp & 0xFF00) >> 8 | (rp & 0x00FF) << 8;
-            rp = (rp & 0xF0F0) >> 4 | (rp & 0x0F0F) << 4;
-            rp = (rp & 0xCCCC) >> 2 | (rp & 0x3333) << 2;
-            rp = (rp & 0xAAAA) >> 1 | (rp & 0x5555) << 1;
-            rp = rp >>2;
+           // rp = rotorpos;
+           // rp = (rp & 0xFF00) >> 8 | (rp & 0x00FF) << 8;
+           // rp = (rp & 0xF0F0) >> 4 | (rp & 0x0F0F) << 4;
+           // rp = (rp & 0xCCCC) >> 2 | (rp & 0x3333) << 2;
+           // rp = (rp & 0xAAAA) >> 1 | (rp & 0x5555) << 1;
+           // rp = rp >>2;
           
             //the next if else just moves the 0 deg position somewhere else while
             //maintaining "circularity" i.e. the new 4095 is the previous 999 when the offset is 1000.
@@ -380,17 +491,18 @@ int main(void)
             else{
                 rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
             }
-            _LATE14 = 1;
-            ADCvalue = sampling1();
+          //  _LATE14 = 1;
+           // ADCvalue = sampling1();
             start_read_pos = 0;
             //__delay_us(100);
-            _LATE14 = 0;
-        }
-       printf("ADC:%u \n ADC2: %u \n ADC3: %u\n", ADCvalue, ADCvalue2, ADCvalue3);
-     printf("%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
-        //printf("%u\n",rotorpos);
-        //printf("%u\n",rp);
-       //printf("%u\n", rot_adj);
+            //_LATE14 = 0;
+        }*/
+       //printf("ADC:%u \n", ADCvalue);
+       //printf("ADC2:%u \n ", ADCvalue2);
+       //printf("ADC3: %u\n",  ADCvalue3);
+      //  printf("adjusted data:%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+      // printf("orig data:%u\n", rot_adj);
+       //printf("sigB: %d\n", sigB);
         //__delay_us(20);
     }
     return 1; 

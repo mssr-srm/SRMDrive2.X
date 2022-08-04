@@ -97,7 +97,7 @@
 #pragma config DMTEN = DISABLE    //Dead Man Timer Enable Bit->Dead Man Timer is Disabled and can be enabled by software
 
 // FDEVOPT
-#pragma config PWMLOCK = ON    //PWM Lock Enable Bit->Certain PWM registers may only be written after key sequence
+#pragma config PWMLOCK = OFF    //PWM Lock Enable Bit->Certain PWM registers may only be written after key sequence
 #pragma config ALTI2C1 = OFF    //Alternate I2C1 Pins Selection Bit->I2C1 mapped to SDA1/SCL1 pins
 
 // FALTREG
