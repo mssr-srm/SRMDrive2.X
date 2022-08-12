@@ -7,6 +7,7 @@
 #include <xc.h>
 #include <dsp.h>
 #include <libpic30.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -110,13 +111,13 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
      * angle is scaled such that 360 =2048... divided by 8 = 256
      * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
      */
-    PhA_Ihigh = 2195;
-    PhB_Ihigh = 2195;
-    PhC_Ihigh = 2195;
+    PhA_Ihigh = 2330;
+    PhB_Ihigh = 2330;
+    PhC_Ihigh = 2330;
     
-    PhA_Ilow = 2190;
-    PhB_Ilow = 2190;
-    PhC_Ilow = 2190;
+    PhA_Ilow = 2325;
+    PhB_Ilow = 2325;
+    PhC_Ilow = 2325;
     /*
     if(sigA == 1){
         _LATC8 = ~_LATC8;
@@ -166,7 +167,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         _LATC6 = 1;
     }
     
-    
+ 
     //_LATC6 = ~_LATC6;
     //_LATE14 = ~_LATE14;
     _LATC9 = 1;         //soft switching A lower switch always on
@@ -176,12 +177,22 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     IFS0bits.T1IF = 0;
 }
 
-int sw_rng = 102;     //window which signal is open; 18*5.6889 = 102.4002
-int sw_rng05 = 51;      //for phase C only
+int sw_rngA = 110;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
+int sw_rngB = 110;
+int sw_rngC = 110;
+int sw_delA = 0;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
+int sw_delB = 0;
+int sw_delC = 0;
+int sw_rng05 = 15;      //for phase C only
 int sw_brd = 256;    //window of neighboring intervals; 45*5.6889
-int strtA = 15;     //2.5*5.6889 =  14.2225
-int strtB = 103;    //18*5.6889 = 102.4002
-int strtC= 182;      //32*5.6889 =  182.0448
+int strtA = 0;     //2.5*5.6889 =  14.2225; 
+int strtB = 85;    //18*5.6889 = 102.4002; 15 = 85.3335
+int strtC= 171;      //32*5.6889 =  182.0448; 30 = 170.667
+
+int initialA = 0;
+int initialB = 0;
+int initialC = 0;
+
 
 void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     rotorpos = readSPI();  //just testing
@@ -195,7 +206,25 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
         rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
      }
     
-    
+    if (((rot_adj - strtA + sw_delA) % sw_brd)<= sw_rngA){
+        sigA = 1;
+    }
+    else{
+        sigA = 0;
+    }
+    if (((rot_adj - strtB + sw_delB) % sw_brd)<= sw_rngB){
+        sigB = 1;
+    }
+    else{
+        sigB = 0;
+    }
+    if (((rot_adj - strtC + sw_delC) % sw_brd)<= sw_rngC){
+        sigC = 1;
+    }
+    else{
+        sigC = 0;
+    }
+    /*
     //divide into two for readability?
     if ((rot_adj >= strtA && rot_adj<=(strtA+sw_rng)) || (rot_adj >= (strtA+sw_brd) && rot_adj<=(strtA+sw_brd+sw_rng)) || (rot_adj >= (strtA+2*sw_brd) && rot_adj<=(strtA+2*sw_brd+sw_rng)) 
             || (rot_adj >= (strtA+3*sw_brd) && rot_adj<=(strtA+3*sw_brd+sw_rng)) || (rot_adj >= (strtA+4*sw_brd) && rot_adj<=(strtA+4*sw_brd+sw_rng)) || (rot_adj >= (strtA+5*sw_brd) && rot_adj<=(strtA+5*sw_brd+sw_rng))
@@ -223,7 +252,9 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     else{
         sigC = 0;
     }
-
+     */
+     
+    
     //_LATC4 = ~_LATC4;
     IFS0bits.T2IF = 0;
 }
@@ -415,6 +446,9 @@ void read_rotorpos(void){
  */
 int main(void)
 {
+ //   initialA = strtA + sw_delA;
+//initialB = strtB + sw_delB;
+//initialC = strtC + sw_delC;
     __C30_UART = 2;
     // initialize the device
     SYSTEM_Initialize();
@@ -500,7 +534,7 @@ int main(void)
        //printf("ADC:%u \n", ADCvalue);
        //printf("ADC2:%u \n ", ADCvalue2);
        //printf("ADC3: %u\n",  ADCvalue3);
-      //  printf("adjusted data:%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
+       // printf("adjusted data:%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
       // printf("orig data:%u\n", rot_adj);
        //printf("sigB: %d\n", sigB);
         //__delay_us(20);
