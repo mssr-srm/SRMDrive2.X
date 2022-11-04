@@ -19,10 +19,6 @@
 #include "PWMcontrols.h"
 
 
-/*
-                         Main application
- */
-
 unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
 unsigned int ADCvalue2 = 0;
@@ -45,15 +41,22 @@ void read_rotorpos(void);
 unsigned int sampling1();
 
 int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
-int rot_offset = 425; //so that the unaligned position is correct
+int rot_offset = 570;//425; //so that the unaligned position is correct
 int rot_adj = 0;       //adjust zero rotor position
 float angle_scale = 360.0/2047;  //scaling factor for 12bit position sensor
 uint16_t rp = 0x0000;
 
+int prev_pos = 0;
+int curr_pos = 0;
+float curr_spd = 0.0;
+int init_pos = 0;   //should be the initial position of the rotor for speed purposes
+int spd_counter = 0;
+int spd_act = 0;
 //signals to turn on coils
 int sigA = 0;
 int sigB = 0;
 int sigC = 0;
+
 
 //according to measurements taken 04/04/2022, the trendlines are:
 //curr vs voltage 1: y = 0.1626x + 2.4696   R2 = 0.9995
@@ -111,13 +114,13 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
      * angle is scaled such that 360 =2048... divided by 8 = 256
      * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
      */
-    PhA_Ihigh = 2330;
-    PhB_Ihigh = 2330;
-    PhC_Ihigh = 2330;
+    PhA_Ihigh = 2405;
+    PhB_Ihigh = 2405;
+    PhC_Ihigh = 2405;
     
-    PhA_Ilow = 2325;
-    PhB_Ilow = 2325;
-    PhC_Ilow = 2325;
+    PhA_Ilow = 2395;
+    PhB_Ilow = 2395;
+    PhC_Ilow = 2395;
     /*
     if(sigA == 1){
         _LATC8 = ~_LATC8;
@@ -140,8 +143,8 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         _LATE14 = 0;
     }
     */
-    //sigA = 1;
-    //sigB = 0;
+    sigA = 1;
+    sigB = 1;
     //sigC = 0;
     
     if (ADCvalue > PhC_Ihigh){
@@ -167,9 +170,6 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         _LATC6 = 1;
     }
     
- 
-    //_LATC6 = ~_LATC6;
-    //_LATE14 = ~_LATE14;
     _LATC9 = 1;         //soft switching A lower switch always on
     _LATC7 = 1;         //soft switching B lower switch always on
     _LATE15 = 1;        //soft switching C lower switch always on
@@ -177,12 +177,12 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     IFS0bits.T1IF = 0;
 }
 
-int sw_rngA = 110;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
-int sw_rngB = 110;
-int sw_rngC = 110;
-int sw_delA = 0;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
-int sw_delB = 0;
-int sw_delC = 0;
+int sw_rngA = 40;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
+int sw_rngB = 40;
+int sw_rngC = 40;
+int sw_delA = 10;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
+int sw_delB = 10;
+int sw_delC = 10;
 int sw_rng05 = 15;      //for phase C only
 int sw_brd = 256;    //window of neighboring intervals; 45*5.6889
 int strtA = 0;     //2.5*5.6889 =  14.2225; 
@@ -205,6 +205,15 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     else{
         rot_adj = rot_max + 1 + ((int)rotorpos - rot_offset);
      }
+    //rot_adj = rot_adj;
+    if ((rot_adj > 2036) || (rot_adj < 499)){
+        prev_pos = 1;
+        curr_pos = 0;   //do this after reaching 90deg, when at 0deg
+    }
+    else if ((rot_adj > 500)){
+        curr_pos = 1;
+    }
+    
     
     if (((rot_adj - strtA + sw_delA) % sw_brd)<= sw_rngA){
         sigA = 1;
@@ -224,43 +233,23 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     else{
         sigC = 0;
     }
-    /*
-    //divide into two for readability?
-    if ((rot_adj >= strtA && rot_adj<=(strtA+sw_rng)) || (rot_adj >= (strtA+sw_brd) && rot_adj<=(strtA+sw_brd+sw_rng)) || (rot_adj >= (strtA+2*sw_brd) && rot_adj<=(strtA+2*sw_brd+sw_rng)) 
-            || (rot_adj >= (strtA+3*sw_brd) && rot_adj<=(strtA+3*sw_brd+sw_rng)) || (rot_adj >= (strtA+4*sw_brd) && rot_adj<=(strtA+4*sw_brd+sw_rng)) || (rot_adj >= (strtA+5*sw_brd) && rot_adj<=(strtA+5*sw_brd+sw_rng))
-            || (rot_adj >= (strtA+6*sw_brd) && rot_adj<=(strtA+6*sw_brd+sw_rng)) || (rot_adj >= (strtA+7*sw_brd) && rot_adj<=(strtA+7*sw_brd+sw_rng))){
-        sigA = 1;
-    }
-    else{
-        sigA = 0;
-    }
-    
-    if ((rot_adj >= strtB && rot_adj<=(strtB+sw_rng)) || (rot_adj >= (strtB+sw_brd) && rot_adj<=(strtB+sw_brd+sw_rng)) || (rot_adj >= (strtB+2*sw_brd) && rot_adj<=(strtB+2*sw_brd+sw_rng)) 
-            || (rot_adj >= (strtB+3*sw_brd) && rot_adj<=(strtB+3*sw_brd+sw_rng)) || (rot_adj >= (strtB+4*sw_brd) && rot_adj<=(strtB+4*sw_brd+sw_rng)) || (rot_adj >= (strtB+5*sw_brd) && rot_adj<=(strtB+5*sw_brd+sw_rng))
-            || (rot_adj >= (strtB+6*sw_brd) && rot_adj<=(strtB+6*sw_brd+sw_rng)) || (rot_adj >= (strtB+7*sw_brd) && rot_adj<=(strtB+7*sw_brd+sw_rng))){
-        sigB = 1;
-    }
-    else{
-        sigB = 0;
-    }
-    
-    if ((rot_adj >= 0 && rot_adj<=(sw_rng05)) || (rot_adj >= (strtC+sw_brd) && rot_adj<=(strtC+sw_brd+sw_rng)) || (rot_adj >= (strtC+2*sw_brd) && rot_adj<=(strtC+2*sw_brd+sw_rng)) 
-            || (rot_adj >= (strtC+3*sw_brd) && rot_adj<=(strtC+3*sw_brd+sw_rng)) || (rot_adj >= (strtC+4*sw_brd) && rot_adj<=(strtC+4*sw_brd+sw_rng)) || (rot_adj >= (strtC+5*sw_brd) && rot_adj<=(strtC+5*sw_brd+sw_rng))
-            || (rot_adj >= (strtC+6*sw_brd) && rot_adj<=(strtC+6*sw_brd+sw_rng)) || (rot_adj >= (strtC+7*sw_brd))){
-        sigC = 1;
-    }
-    else{
-        sigC = 0;
-    }
-     */
-     
-    
     //_LATC4 = ~_LATC4;
     IFS0bits.T2IF = 0;
 }
-
+int temp_cntr = 0;
 void __attribute__ ((interrupt,no_auto_psv)) _T3Interrupt(void){
     
+    if (prev_pos == 1 && curr_pos == 0){
+        spd_counter++;//start counting once rotor pass zero deg
+    }
+    if(prev_pos == 1 && curr_pos == 1){
+        spd_act = spd_counter;   //stop counting once 90 deg
+        spd_counter = 0;
+        prev_pos = 0;
+        curr_pos = 0;
+    }
+    
+    _LATC4 = ~_LATC4;
     IFS0bits.T3IF = 0;
 }
 
@@ -313,19 +302,21 @@ void timer2setup(){
     T2CONbits.TON = 1;
 }
 
+//2048 bits per 360 deg, ~5.69bits/deg. 1rpm = 360deg/min = 6deg/sec = 34.13bits/sec
+//since pos sensor is 2048, sampling rates faster than ~2kHz is pointless, wont detect changes.
 void timer3setup(){
     T3CON = 0x0000;
     TMR3 = 0x0000;
-    PR3 = 15625;
-    T3CONbits.TCKPS = 0b0011;
+    PR3 = 20000; //5000 is 4kHz
+    T3CONbits.TCKPS = 0b00;
     
     //interrupts
-    IPC2bits.T3IP = 7;
+    IPC2bits.T3IP = 6;
     IFS0bits.T3IF = 0;
-    IEC0bits.T2IE = 1;
+    IEC0bits.T3IE = 1;
     
     //turn on
-    T3CONbits.TON;
+    T3CONbits.TON = 1;
 }
 
 void timer4setup(){
@@ -457,6 +448,7 @@ int main(void)
       
     timer1setup();
     timer2setup();
+    timer3setup();
     
     _TRISB14 = 0;
     _TRISB15 = 0;
@@ -495,6 +487,7 @@ int main(void)
     //correct!
     
     //LATE14 is the C lower switch! so keep it on for softswitching
+    init_pos = readSPI();
     while (1)
     {
        //__delay32(173);
@@ -534,15 +527,18 @@ int main(void)
        //printf("ADC:%u \n", ADCvalue);
        //printf("ADC2:%u \n ", ADCvalue2);
        //printf("ADC3: %u\n",  ADCvalue3);
-       // printf("adjusted data:%f\n", rot_adj*angle_scale); //apparently this line takes 5ms to send, interesting
-      // printf("orig data:%u\n", rot_adj);
+        printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
+       //printf("orig data:%u\n", rot_adj);
+        //printf("%f\n",15000.0/spd_act);
+        //printf("%d, prevpos:%d,curr_pos:%d, actual rotor: %d\n", spd_act, prev_pos,curr_pos,rot_adj);
        //printf("sigB: %d\n", sigB);
         //__delay_us(20);
     }
     return 1; 
 }
 
-uint16_t readSPI(){
+uint16_t readSPI()
+{
     //need to add Csn pulses before reading. I think this will trigger the sensor to release data
     //i think it also needs to clear the recv bit after or before reading so dspic can work
     //i think at FCY of 4M, since each cycle is 250 ns, i dont have to put a delay. The instruction cycles will cover the needed delay by the encoder
