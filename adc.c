@@ -21,7 +21,7 @@ void initadc1(void){
     AD1CON1 = 0x0000;
     AD1CON1bits.AD12B = 1;  //12 bit mode
     AD1CON2 = 0x0000;
-    AD1CON3 = 0x000F;
+    AD1CON3 = 0x0000;   //nov922 000F
     AD1CON4 = 0x0000;
     AD1CHS0bits.CH0SA = 0x13;   //corresponds to AN19, pot on devboard
    // AD1CHS0bits.CH0SA = 0x13;   //corresponds to AN19, pot on devboard
@@ -30,6 +30,6 @@ void initadc1(void){
     AD1CSSH = 0x0000;
     AD1CSSL = 0x0000;
     AD1CON1bits.ADON = 1;
-    Delay_us(20);
+    Delay_us(2);
 
 }

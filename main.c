@@ -101,7 +101,9 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     else{
         ADCvalue = 20000;
     }
-    
+    //AD1CHS0bits.CH0SA = 0x13; //RG9 = AN16
+     //   ADCvalue = sampling1();
+      //  PDC2 = ADCvalue>>2;
     //2190<x<2195 results in 1.5A
     //2265<x<2270 results in 2.0A
     //2325<x<2330, test next lower, results 2.5A?
@@ -143,10 +145,10 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         _LATE14 = 0;
     }
     */
-    sigA = 1;
-    sigB = 1;
+    //sigA = 1;
+    //sigB = 1;
     //sigC = 0;
-    
+    /*
     if (ADCvalue > PhC_Ihigh){
         _LATE14 =0;// switch off sometimes!
     }
@@ -168,13 +170,64 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     }
     else if ((ADCvalue3 < PhB_Ilow) && (sigB == 1)){
         _LATC6 = 1;
-    }
+    }*/
     
     _LATC9 = 1;         //soft switching A lower switch always on
     _LATC7 = 1;         //soft switching B lower switch always on
     _LATE15 = 1;        //soft switching C lower switch always on
     //_LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
+}
+int curr_setpoint = 0;
+int error0=0;
+int error1 = 0;
+int error2 = 0;
+float dt = 0.0005;
+float Kp = 0.001, Ki = 0.01, Kd = 0;
+float A0 = 0.0; 
+float pid_fout = 0.0;
+//A0 = Kp + Ki*dt + kd/dt;
+//A1 = -Kp - 2*Kd/dt;
+//A2 = Kd/dt;
+//https://en.wikipedia.org/wiki/PID_controller#Discrete_implementation
+//https://batchloaf.wordpress.com/2013/06/11/simple-pi-control-using-the-dspic30f4011/
+unsigned int PIDcontroller(int curr_meas){
+    //setpoint = read_analog_channel(0);
+    //measured_value = read_analog_channel(1);
+    //error2 = error1;
+  //  error1 = error0;
+//    error0 = curr-setpoint - curr_meas;
+ //   pid_fout = pid_fout + A0*error0 + A1*error1 + A2*error2;
+    /*     
+    error = curr_setpoint - curr_meas;
+    integral = integral + error*dt;
+    output = Kp*error + Ki*integral;
+    previous_error = error;
+         
+    duty_cycle = output;
+    if (duty_cycle > 0.8) duty_cycle = 0.8;
+    if (duty_cycle < 0.2) duty_cycle = 0.2;
+         
+        OC1RS = (int)(duty_cycle * Ton);
+        OC2R = OC1RS + dead_time;
+        return pid_result;
+    
+     * A0 := Kp + Ki*dt + Kd/dt
+    A1 := -Kp - 2*Kd/dt
+    A2 := Kd/dt
+    error[2] := 0 // e(t-2)
+    error[1] := 0 // e(t-1)
+    error[0] := 0 // e(t)
+    output := u0  // Usually the current value of the actuator
+
+    loop:
+        error[2] := error[1]
+        error[1] := error[0]
+        error[0] := setpoint ? measured_value
+        output := output + A0 * error[0] + A1 * error[1] + A2 * error[2]
+        wait(dt)
+        goto loop*/
+    
 }
 
 int sw_rngA = 40;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
@@ -249,7 +302,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T3Interrupt(void){
         curr_pos = 0;
     }
     
-    _LATC4 = ~_LATC4;
+    //_LATC4 = ~_LATC4;
     IFS0bits.T3IF = 0;
 }
 
@@ -524,7 +577,7 @@ int main(void)
             //__delay_us(100);
             //_LATE14 = 0;
         }*/
-       //printf("ADC:%u \n", ADCvalue);
+       //printf("ADC:%u,%d \n", ADCvalue,(int)(ADCvalue*1.1));
        //printf("ADC2:%u \n ", ADCvalue2);
        //printf("ADC3: %u\n",  ADCvalue3);
         printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
