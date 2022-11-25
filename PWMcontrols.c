@@ -22,11 +22,11 @@ void initPWM(void){
  //   SPHASE3 = 0;
     
     /*duty cycles*/
-    PDC1 = 900;
+    PDC1 = 0;
   //  SDC1 = 100;
-    PDC2 = 500;
+    PDC2 = 0;
     //SDC2 = 0;
-    PDC3 = 700;
+    PDC3 = 0;
     //SDC3 = 0;
     
     /*set dead time values*/

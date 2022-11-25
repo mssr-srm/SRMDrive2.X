@@ -13,7 +13,6 @@ void initadc1(void){
     //set port config
     ANSELA = ANSELB = ANSELC = ANSELE = ANSELG = 0x0000;
     ANSELGbits.ANSG6 = 1;   //assigns RG6 as analog pin
-    //ANSELGbits.ANSG6 = 1;   //assigns RG6 as analog pin
     ANSELAbits.ANSA0 = 1;
     ANSELAbits.ANSA4 = 1;
     ANSELGbits.ANSG9 = 1;  //assigns RG9  ? Phase C?
