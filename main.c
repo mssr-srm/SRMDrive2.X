@@ -57,6 +57,7 @@ int sigA = 0;
 int sigB = 0;
 int sigC = 0;
 
+int is_starting = 1;
 
 //according to measurements taken 04/04/2022, the trendlines are:
 //curr vs voltage 1: y = 0.1626x + 2.4696   R2 = 0.9995
@@ -86,7 +87,11 @@ int sigC = 0;
 
 //delay 10 window 50
 //450 = 396 (76,77))
+//450 = 483 but backwards??
+//400 = 440? but weird backwards
+//400 = 377 but normal
 //300  = 311 (96))
+//200 =  193 (153))
 
 //delay 10 window 40
 //450 = 385 rpm (77))
@@ -146,60 +151,66 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
      * angle is scaled such that 360 =2048... divided by 8 = 256
      * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
      */
-    PhA_Ihigh = 2330;
-    PhB_Ihigh = 2330;
-    PhC_Ihigh = 2330;
+    PhA_Ihigh = 2405;
+    PhB_Ihigh = 2405;
+    PhC_Ihigh = 2405;
     
-    PhA_Ilow = 2325;
-    PhB_Ilow = 2325;
-    PhC_Ilow = 2325;
+    PhA_Ilow = 2395;
+    PhB_Ilow = 2395;
+    PhC_Ilow = 2395;
   
     
     //sigA = 1;
     //sigB = 1;
     //sigC = 0;
-    /*
-    if (ADCvalue > PhC_Ihigh){
-        _LATE14 =0;// switch off sometimes!
-    }
-    else if ((ADCvalue < PhC_Ilow) && (sigC == 1)){  //used to be 2190
-        _LATE14 = 1;
-    }
+    if(is_starting == 1){
+        if (ADCvalue > PhC_Ihigh){
+           // _LATE14 =0;// switch off sometimes!
+            PDC3 = 0;
+        }
+        else if ((ADCvalue < PhC_Ilow) && (sigC == 1)){  //used to be 2190
+            //_LATE14 = 1;
+            PDC3 = 1000;
+        }
+        //A control
+        if (ADCvalue2 > PhA_Ihigh){
+            //_LATC8 = 0;
+            PDC1 = 0;
+        }
+        else if ((ADCvalue2 < PhA_Ilow) && (sigA == 1)){
+            //_LATC8 = 1;
+            PDC1 = 1000;
+        }
     
-    //A control
-    if (ADCvalue2 > PhA_Ihigh){
-        _LATC8 = 0;
-    }
-    else if ((ADCvalue2 < PhA_Ilow) && (sigA == 1)){
-        _LATC8 = 1;
-    }
-    
-    //B control
-    if (ADCvalue3 > PhB_Ihigh){
-        _LATC6 = 0;
-    }
-    else if ((ADCvalue3 < PhB_Ilow) && (sigB == 1)){
-        _LATC6 = 1;
-    }*/
-    
-    if (sigA == 1){
-        PDC1 = 300;
-    }
-    else{
-        PDC1 = 0;
-    }
-    if (sigB == 1){
-        PDC2 = 300;
-    }
-    else{
-        PDC2 = 0;
-    }
-    
-    if(sigC == 1){
-        PDC3 = 300;
-    }
-    else{
-        PDC3 = 0;
+        //B control
+        if (ADCvalue3 > PhB_Ihigh){
+           // _LATC6 = 0;
+            PDC2 = 0;
+        }
+        else if ((ADCvalue3 < PhB_Ilow) && (sigB == 1)){
+           // _LATC6 = 1;
+            PDC2 = 1000;
+        }
+    }       
+    else if(is_starting == 0){
+        if (sigA == 1){
+            PDC1 = 350;
+        }
+        else{
+            PDC1 = 0;
+        }
+        if (sigB == 1){
+            PDC2 = 350;
+        }
+        else{
+            PDC2 = 0;
+        }
+        if(sigC == 1){
+            PDC3 = 350;
+        }
+        else{
+            PDC3 = 0;
+        }
     }
     _LATC9 = 1;         //soft switching A lower switch always on
     _LATC7 = 1;         //soft switching B lower switch always on
@@ -289,10 +300,8 @@ int togglecount2 = 1;
 int spd_a = 0;
 int spd_b = 0;
 
-//so far
-//spdact,rpm:
-//79, 380ish
-//132, 225ish
+int starter;
+
 
 void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     rotorpos = readSPI();  //just testing
@@ -307,11 +316,18 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
      }
     spd_b = spd_a;
     spd_a = rot_adj;
+    if(is_starting == 1){
+        starter++;
+    }
+    if(starter>10000){
+        is_starting = 0;
+    }
     if ((rot_adj > 2036) || (rot_adj < 479)){
       //  prev_pos = 1;
       //  curr_pos = 0;   //do this after reaching 90deg, when at 0deg
         
         spd_counter++;
+        
         if( (spd_a > (30+spd_b)) || ((spd_a+30) < spd_b) ){
             togglecount = 1;
         }
@@ -612,7 +628,7 @@ int main(void)
        // printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
         //printf("orig data:%u\n", rot_adj);
         //printf("pos:%d, %d, %d,t:%d\n",rot_adj, spd_act, spd_counter,togglecount);
-        printf("%f,%d\n", (30000.0)/((float)spd_act), spd_act);
+        printf("%f,%d\n", (30000.0)/((float)spd_act), starter);
        // printf("%d, prevpos:%d,curr_pos:%d\n", spd_act, prev_pos,curr_pos);
        //printf("sigB: %d\n", sigB);
         //__delay_us(20);
