@@ -38,10 +38,12 @@ int start_read_pos = 0;
 
 unsigned int readSPI(void);
 void read_rotorpos(void);
-unsigned int sampling1();
+unsigned int sampling1(void);
+int PIDcontrollerA(int);
+void PIDDefs(void);
 
 int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
-int rot_offset = 570;//425; //so that the unaligned position is correct
+int rot_offset = 1580;//425; //so that the unaligned position is correct
 int rot_adj = 0;       //adjust zero rotor position
 float angle_scale = 360.0/2047;  //scaling factor for 12bit position sensor
 uint16_t rp = 0x0000;
@@ -58,6 +60,9 @@ int sigB = 0;
 int sigC = 0;
 
 int is_starting = 1;
+
+int pwm_signal = 0;
+float pid_out = 0.0;
 
 //according to measurements taken 04/04/2022, the trendlines are:
 //curr vs voltage 1: y = 0.1626x + 2.4696   R2 = 0.9995
@@ -101,7 +106,8 @@ int is_starting = 1;
 
 //delay = 5 window = 30
 //200 = 
-
+  
+int currlim = 4000; //2667 above is 5.0A. this should be good enough for now?
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //Csn pin for encoder has to be active for at least 500ns
     //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
@@ -151,19 +157,17 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
      * angle is scaled such that 360 =2048... divided by 8 = 256
      * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
      */
-    PhA_Ihigh = 2405;
-    PhB_Ihigh = 2405;
-    PhC_Ihigh = 2405;
-    
-    PhA_Ilow = 2395;
-    PhB_Ilow = 2395;
-    PhC_Ilow = 2395;
-  
-    
     //sigA = 1;
     //sigB = 1;
     //sigC = 0;
     if(is_starting == 1){
+        PhA_Ihigh = 2330;
+    PhB_Ihigh = 2330;
+    PhC_Ihigh = 2330;
+    
+    PhA_Ilow = 2325;
+    PhB_Ilow = 2325;
+    PhC_Ilow = 2325;
         if (ADCvalue > PhC_Ihigh){
            // _LATE14 =0;// switch off sometimes!
             PDC3 = 0;
@@ -193,94 +197,81 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         }
     }       
     else if(is_starting == 0){
-        if (sigA == 1){
-            PDC1 = 350;
+        if ((sigA == 1) ){
+            PDC1 = pwm_signal;
         }
         else{
             PDC1 = 0;
         }
-        if (sigB == 1){
-            PDC2 = 350;
+        //&& (ADCvalue2<currlim)
+        if ((sigB == 1) ){
+            PDC2 = pwm_signal;
         }
         else{
             PDC2 = 0;
         }
-        if(sigC == 1){
-            PDC3 = 350;
+        if((sigC == 1)){
+            PDC3 = pwm_signal;
         }
         else{
             PDC3 = 0;
         }
     }
-    _LATC9 = 1;         //soft switching A lower switch always on
-    _LATC7 = 1;         //soft switching B lower switch always on
-    _LATE15 = 1;        //soft switching C lower switch always on
+   
     //_LATC4 = ~_LATC4;
     IFS0bits.T1IF = 0;
 }
 
 int curr_setpoint = 0;
+int speed_setpoint = 75;    //rpm speed is 30000/setpoint
+
 int error0 = 0;
 int error1 = 0;
 int error2 = 0;
 
 float PIDA1 = 0.0; 
-float dt = 0.0005;
-float KpA = 0.001; 
-float KiA = 0.01; 
-float KdA = 0.0;
+float PIDA2 = 0.0;
+float PIDA3 = 0.0;
+float integral = 0.0;
+float derivative = 0.0;
+float dt = 0.001;
+float KpA = -50.0; 
+float KiA = -10.0; 
+float KdA = 0.05;
 float pid_fout = 0.0;
 
 void PIDDefs(){
-    PIDA1 = KpA + (KiA*dt) + (KdA/dt);
-   // PIDA2 = -KpA - 2*KdA/dt;
-    //PDIA3 = KdA/dt;
+    //PIDA1 = KpA + (KiA*dt) + (KdA/dt);
+   // PIDA2 = -KpA - ((2*KdA)/dt);
+    //PIDA3 = KdA/dt;
 }
-
+float trialling = 0.0;
 //https://en.wikipedia.org/wiki/PID_controller#Discrete_implementation
 //https://batchloaf.wordpress.com/2013/06/11/simple-pi-control-using-the-dspic30f4011/
-unsigned int PIDcontrollerA(int curr_meas){
+int PIDcontrollerA(int speed_meas){
    
-    //measured_value = read_analog_channel(1);
-    //error2 = error1;
-  //  error1 = error0;
-//    error0 = curr-setpoint - curr_meas;
- //   pid_fout = pid_fout + A0*error0 + A1*error1 + A2*error2;
-    /*     
-    error = curr_setpoint - curr_meas;
-    integral = integral + error*dt;
-    output = Kp*error + Ki*integral;
-    previous_error = error;
-         
-    duty_cycle = output;
-    if (duty_cycle > 0.8) duty_cycle = 0.8;
-    if (duty_cycle < 0.2) duty_cycle = 0.2;
-         
-        OC1RS = (int)(duty_cycle * Ton);
-        OC2R = OC1RS + dead_time;
-        return pid_result;
+    error2 = error1;
+    error1 = error0;
+    error0 = speed_setpoint - speed_meas;
+    integral = integral + ((float)error0 * dt);
+    derivative = ((float)(error0 - error1))/dt;  
+    //trialling = (PIDA1 * (float)error0) + (PIDA2 * (float)error1) + (PIDA3 * (float)error2);
+    //pid_out = pid_out + trialling;
+    pid_out = KpA*(float)error0 + KiA*integral + KdA*derivative;
     
-     * A0 := Kp + Ki*dt + Kd/dt
-    A1 := -Kp - 2*Kd/dt
-    A2 := Kd/dt
-    error[2] := 0 // e(t-2)
-    error[1] := 0 // e(t-1)
-    error[0] := 0 // e(t)
-    output := u0  // Usually the current value of the actuator
-
-    loop:
-        error[2] := error[1]
-        error[1] := error[0]
-        error[0] := setpoint ? measured_value
-        output := output + A0 * error[0] + A1 * error[1] + A2 * error[2]
-        wait(dt)
-        goto loop*/
-    return 0;
+    if(pid_out>800.0){
+        pid_out = 800.0;
+    }
+    if(pid_out<1.0){
+        pid_out = 0.0;
+    }
+  
+    return (int)pid_out;
 }
 
-int sw_rngA = 50;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
-int sw_rngB = 50;
-int sw_rngC = 50;
+int sw_rngA = 40;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
+int sw_rngB = 40;
+int sw_rngC = 40;
 int sw_delA = 10;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
 int sw_delB = 10;
 int sw_delC = 10;
@@ -300,7 +291,7 @@ int togglecount2 = 1;
 int spd_a = 0;
 int spd_b = 0;
 
-int starter;
+int starter = 0;
 
 
 void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
@@ -320,28 +311,29 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
         starter++;
     }
     if(starter>10000){
-        is_starting = 0;
+        is_starting = 0;//set to zero for jumpstart
     }
     if ((rot_adj > 2036) || (rot_adj < 479)){
-      //  prev_pos = 1;
-      //  curr_pos = 0;   //do this after reaching 90deg, when at 0deg
-        
+   
         spd_counter++;
         
         if( (spd_a > (30+spd_b)) || ((spd_a+30) < spd_b) ){
             togglecount = 1;
         }
+        if(spd_counter>10000){
+            spd_counter = 10000;    //if the rotor is stalled
+        }
     }
     else if ((rot_adj > 480) && (rot_adj<520)){
-      //  prev_pos = 1;
-      //  curr_pos = 1;
         if((togglecount == 1) && ((spd_a > (30 + spd_b)) || ((spd_a+30)>spd_b))){
             spd_act = spd_counter;
             spd_counter = 0;
             togglecount = 0;
         }
     }
-    
+    if(is_starting == 0){
+        pwm_signal = PIDcontrollerA(spd_act);
+    }
     if (((rot_adj - strtA + sw_delA) % sw_brd)<= sw_rngA){
         sigA = 1;
     }
@@ -360,7 +352,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     else{
         sigC = 0;
     }
-    _LATC4 = ~_LATC4;
+    //_LATC4 = ~_LATC4;
     IFS0bits.T2IF = 0;
 }
 int temp_cntr = 0;
@@ -378,7 +370,6 @@ void __attribute__ ((interrupt,no_auto_psv)) _T5Interrupt(void){
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _U2TXInterrupt(void){
-
     IFS1bits.U2TXIF = 0;    //reset interrupt flag
 }
 
@@ -462,7 +453,6 @@ void timer5setup(){
     T5CONbits.TON;
 }
 
-
 void Delay_us(unsigned int delay){
     int i =0;
     for ( i = 0; i < delay; i++){
@@ -486,7 +476,8 @@ unsigned int sampling1(void){
 void read_rotorpos(void){
     rotorpos = readSPI();
 }
-
+float dummy = -89.9;
+int dummy2 = 2;
 /*
  The entire thing that commutates the motor *should be in a single* ISR
  * if possible, as it possibly simplifies coding and has economic use of dspic 
@@ -549,9 +540,7 @@ void read_rotorpos(void){
  */
 int main(void)
 {
- //   initialA = strtA + sw_delA;
-//initialB = strtB + sw_delB;
-//initialC = strtC + sw_delC;
+
     __C30_UART = 2;
     // initialize the device
     SYSTEM_Initialize();
@@ -587,7 +576,7 @@ int main(void)
     _LATE15 = 0;    //off initially
     _LATG6 = 0;
     _LATG8 = 1;     //power supply for pot
-    
+    PIDDefs();
     initPWM();
     
     INTCON1bits.NSTDIS = 0;
@@ -596,9 +585,12 @@ int main(void)
     printf("ABCDEDF!\n");
     //can use Lat flags befor and after the motor run loop to test if timing is
     //correct!
-    
     //LATE14 is the C lower switch! so keep it on for softswitching
     init_pos = readSPI();
+    //originally in the hysteresis part of the code
+    _LATC9 = 1;         //soft switching A lower switch always on
+    _LATC7 = 1;         //soft switching B lower switch always on
+    _LATE15 = 1;        //soft switching C lower switch always on
     while (1)
     {
        //__delay32(173);
@@ -627,10 +619,11 @@ int main(void)
        //printf("ADC:%u,%d \n", ADCvalue,(int)(ADCvalue*1.1));
        // printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
         //printf("orig data:%u\n", rot_adj);
-        //printf("pos:%d, %d, %d,t:%d\n",rot_adj, spd_act, spd_counter,togglecount);
-        printf("%f,%d\n", (30000.0)/((float)spd_act), starter);
-       // printf("%d, prevpos:%d,curr_pos:%d\n", spd_act, prev_pos,curr_pos);
-       //printf("sigB: %d\n", sigB);
+       // printf("pos:%d, %d, %d,t:%d\n",rot_adj, spd_act, spd_counter,togglecount);
+        //printf("%f,%d\n", (30000.0)/((float)spd_act), starter);
+        //printf("A:%d B:%d C:%d\n",error0, error1, error2);
+        printf("prevpos:%d, sig:%d\n", spd_act, ADCvalue);
+      // printf("error: %dpwm:%d,%f\n", error0, pwm_signal, pid_out);
         //__delay_us(20);
     }
     return 1; 
