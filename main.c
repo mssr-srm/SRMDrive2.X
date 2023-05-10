@@ -23,14 +23,19 @@ unsigned int recv_position = 0;  //stores what SPI reads NOW
 unsigned int ADCvalue = 0;
 unsigned int ADCvalue2 = 0;
 unsigned int ADCvalue3 = 0;
+ //2190<x<2195 results in 1.5A
+    //2265<x<2270 results in 2.0A
+    //2325<x<2330, test next lower, results 2.5A?
+    //2395<x<2405, 3.0A
+    //2530<x<2540, 4.0A
+    //2667<x<2675, 5.0A?
+unsigned int PhA_Ihigh = 2405;
+unsigned int PhB_Ihigh = 2405;
+unsigned int PhC_Ihigh = 2405;
 
-unsigned int PhA_Ihigh = 0;
-unsigned int PhB_Ihigh = 0;
-unsigned int PhC_Ihigh = 0;
-
-unsigned int PhA_Ilow = 0;
-unsigned int PhB_Ilow = 0;
-unsigned int PhC_Ilow = 0;
+unsigned int PhA_Ilow = 2395;
+unsigned int PhB_Ilow = 2395;
+unsigned int PhC_Ilow = 2395;
 
 uint16_t rotorpos = 0;
 
@@ -43,7 +48,9 @@ int PIDcontrollerA(int);
 void PIDDefs(void);
 
 int rot_max = 2047;    //this is the maximum value of the sensor 12 bits
-int rot_offset = 1580;//425; //so that the unaligned position is correct
+int rot_offset = 440;//1580; //so that the unaligned position is correct. for the ++++ setup
+//int rot_offset = 946; //++-+
+//int rot_offset = 675;
 int rot_adj = 0;       //adjust zero rotor position
 float angle_scale = 360.0/2047;  //scaling factor for 12bit position sensor
 uint16_t rp = 0x0000;
@@ -107,7 +114,7 @@ float pid_out = 0.0;
 //delay = 5 window = 30
 //200 = 
   
-int currlim = 4000; //2667 above is 5.0A. this should be good enough for now?
+int currlim = 6500; //2667 above is 5.0A. this should be good enough for now?
 void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //Csn pin for encoder has to be active for at least 500ns
     //with _delay32, smaller delay is possible. 173 at ~lat = lat produces 100 kHz (10000ns)
@@ -143,16 +150,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     else{
         ADCvalue = 20000;
     }
-    //AD1CHS0bits.CH0SA = 0x13; //RG9 = AN16
-     //   ADCvalue = sampling1();
-      //  PDC2 = ADCvalue>>2;
-    //2190<x<2195 results in 1.5A
-    //2265<x<2270 results in 2.0A
-    //2325<x<2330, test next lower, results 2.5A?
-    //2395<x<2405, 3.0A
-    //2530<x<2540, 4.0A
-    //2667<x<2675, 5.0A?
-
+  
     /*
      * angle is scaled such that 360 =2048... divided by 8 = 256
      * so 1 bit is 0.17578125degrees. 1 degree is 5.6889 bits
@@ -161,18 +159,18 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
     //sigB = 1;
     //sigC = 0;
     if(is_starting == 1){
-        PhA_Ihigh = 2330;
-    PhB_Ihigh = 2330;
-    PhC_Ihigh = 2330;
+        /*PhA_Ihigh = 2405;
+        PhB_Ihigh = 2405;
+        PhC_Ihigh = 2405;
     
-    PhA_Ilow = 2325;
-    PhB_Ilow = 2325;
-    PhC_Ilow = 2325;
+        PhA_Ilow = 2395;
+        PhB_Ilow = 2395;
+        PhC_Ilow = 2395;*/
         if (ADCvalue > PhC_Ihigh){
-           // _LATE14 =0;// switch off sometimes!
+            //_LATE14 =0;// switch off sometimes!
             PDC3 = 0;
         }
-        else if ((ADCvalue < PhC_Ilow) && (sigC == 1)){  //used to be 2190
+        else if ((ADCvalue < PhC_Ilow) && (sigC == 1)){
             //_LATE14 = 1;
             PDC3 = 1000;
         }
@@ -185,7 +183,6 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
             //_LATC8 = 1;
             PDC1 = 1000;
         }
-    
         //B control
         if (ADCvalue3 > PhB_Ihigh){
            // _LATC6 = 0;
@@ -197,20 +194,20 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
         }
     }       
     else if(is_starting == 0){
-        if ((sigA == 1) ){
+        if ((sigA == 1) && (ADCvalue2 < currlim)){
             PDC1 = pwm_signal;
         }
         else{
             PDC1 = 0;
         }
         //&& (ADCvalue2<currlim)
-        if ((sigB == 1) ){
+        if ((sigB == 1) && (ADCvalue3 < currlim)){
             PDC2 = pwm_signal;
         }
         else{
             PDC2 = 0;
         }
-        if((sigC == 1)){
+        if((sigC == 1) && (ADCvalue < currlim)){
             PDC3 = pwm_signal;
         }
         else{
@@ -223,7 +220,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt(void){
 }
 
 int curr_setpoint = 0;
-int speed_setpoint = 75;    //rpm speed is 30000/setpoint
+int speed_setpoint = 100;    //rpm speed is 30000/setpoint
 
 int error0 = 0;
 int error1 = 0;
@@ -235,8 +232,8 @@ float PIDA3 = 0.0;
 float integral = 0.0;
 float derivative = 0.0;
 float dt = 0.001;
-float KpA = -50.0; 
-float KiA = -10.0; 
+float KpA = -30.0; 
+float KiA = -5.0; 
 float KdA = 0.05;
 float pid_fout = 0.0;
 
@@ -259,8 +256,8 @@ int PIDcontrollerA(int speed_meas){
     //pid_out = pid_out + trialling;
     pid_out = KpA*(float)error0 + KiA*integral + KdA*derivative;
     
-    if(pid_out>800.0){
-        pid_out = 800.0;
+    if(pid_out>999.0){
+        pid_out = 999.0;
     }
     if(pid_out<1.0){
         pid_out = 0.0;
@@ -272,9 +269,9 @@ int PIDcontrollerA(int speed_meas){
 int sw_rngA = 40;     //window which signal is open; 18*5.6889 = 102.4002 Emobility values: 102, and 51 for sw_rng05
 int sw_rngB = 40;
 int sw_rngC = 40;
-int sw_delA = 10;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
-int sw_delB = 10;
-int sw_delC = 10;
+int sw_delA = 0;    //if the delay is positive, then it works backwards. E.g. delay of 2 deg, means turned on from 358 degrees and so on.
+int sw_delB = 0;
+int sw_delC = 0;
 int sw_rng05 = 15;      //for phase C only
 int sw_brd = 256;    //window of neighboring intervals; 45*5.6889
 int strtA = 0;     //2.5*5.6889 =  14.2225; 
@@ -311,12 +308,10 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
         starter++;
     }
     if(starter>10000){
-        is_starting = 0;//set to zero for jumpstart
+        is_starting = 1;//set to zero for jumpstart
     }
     if ((rot_adj > 2036) || (rot_adj < 479)){
-   
         spd_counter++;
-        
         if( (spd_a > (30+spd_b)) || ((spd_a+30) < spd_b) ){
             togglecount = 1;
         }
@@ -338,7 +333,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
         sigA = 1;
     }
     else{
-        sigA = 0;
+        sigA = 0;   //change this to 1 for static torque testing purposes
     }
     if (((rot_adj - strtB + sw_delB) % sw_brd)<= sw_rngB){
         sigB = 1;
@@ -352,7 +347,6 @@ void __attribute__ ((interrupt,no_auto_psv)) _T2Interrupt(void){
     else{
         sigC = 0;
     }
-    //_LATC4 = ~_LATC4;
     IFS0bits.T2IF = 0;
 }
 int temp_cntr = 0;
@@ -617,13 +611,13 @@ int main(void)
             //_LATE14 = 0;
         }*/
        //printf("ADC:%u,%d \n", ADCvalue,(int)(ADCvalue*1.1));
-       // printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
-        //printf("orig data:%u\n", rot_adj);
-       // printf("pos:%d, %d, %d,t:%d\n",rot_adj, spd_act, spd_counter,togglecount);
+        printf("adjusted data:%f\n", (rot_adj*angle_scale)); //apparently this line takes 5ms to send, interesting
+      //  printf("orig data:%u\n", rot_adj);
+        //printf("pos:%d, %d, %d,t:%d\n",rot_adj, spd_act, spd_counter,(int)pid_out);
         //printf("%f,%d\n", (30000.0)/((float)spd_act), starter);
         //printf("A:%d B:%d C:%d\n",error0, error1, error2);
         printf("prevpos:%d, sig:%d\n", spd_act, ADCvalue);
-      // printf("error: %dpwm:%d,%f\n", error0, pwm_signal, pid_out);
+       //printf("error: %dpwm:%d,%f\n", error0, pwm_signal, pid_out);
         //__delay_us(20);
     }
     return 1; 
